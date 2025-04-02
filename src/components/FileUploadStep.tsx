@@ -23,6 +23,7 @@ const FileUploadStep = ({
 }: FileUploadStepProps) => {
   const [templatePreview, setTemplatePreview] = useState<string | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<number | null>(null);
+  const [cssContent, setCssContent] = useState<string | null>(null);
   
   const handleDocFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -41,9 +42,46 @@ const FileUploadStep = ({
         reader.onload = (e) => {
           if (e.target && typeof e.target.result === 'string') {
             setTemplatePreview(e.target.result);
+            setCssContent(null);
           }
         };
         reader.readAsDataURL(file);
+      }
+      // Handle CSS files
+      else if (file.name.endsWith('.css')) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          if (e.target && typeof e.target.result === 'string') {
+            setCssContent(e.target.result);
+            setTemplatePreview(null);
+            
+            // Add a preview for CSS files
+            const cssPreview = `
+              <div class="css-preview">
+                <div class="preview-header">CSS Template Preview</div>
+                <div class="preview-content">Custom styles loaded</div>
+              </div>
+            `;
+            
+            // Create a data URL with embedded styles
+            const htmlWithStyles = `
+              <html>
+                <head>
+                  <style>${e.target.result}</style>
+                  <style>
+                    body { margin: 0; padding: 0; display: flex; align-items: center; justify-content: center; height: 100%; }
+                    .css-preview { text-align: center; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; max-width: 100%; }
+                    .preview-header { padding: 10px; background: linear-gradient(to right, #4f46e5, #3b82f6); color: white; font-weight: bold; }
+                    .preview-content { padding: 20px; }
+                  </style>
+                </head>
+                <body>${cssPreview}</body>
+              </html>
+            `;
+            setTemplatePreview(`data:text/html;charset=utf-8,${encodeURIComponent(htmlWithStyles)}`);
+          }
+        };
+        reader.readAsText(file);
       }
     }
   };
@@ -57,6 +95,7 @@ const FileUploadStep = ({
   const selectPredefinedTemplate = (id: number) => {
     setSelectedTemplate(id);
     setTemplatePreview(null);
+    setCssContent(null);
     setTemplateFile(null);
   };
 
@@ -118,17 +157,26 @@ const FileUploadStep = ({
             <div className="space-y-4">
               <div className="flex items-center justify-center h-40 border-2 border-dashed rounded-md border-gray-300 bg-gray-50">
                 {templatePreview ? (
-                  <div className="text-center">
-                    <img 
-                      src={templatePreview} 
-                      alt="Template preview" 
-                      className="h-32 object-contain mx-auto" 
-                    />
+                  <div className="text-center w-full h-full">
+                    {templateFile?.name.endsWith('.css') ? (
+                      <iframe 
+                        src={templatePreview} 
+                        title="CSS Preview" 
+                        className="w-full h-full rounded"
+                      />
+                    ) : (
+                      <img 
+                        src={templatePreview} 
+                        alt="Template preview" 
+                        className="h-32 object-contain mx-auto" 
+                      />
+                    )}
                     <Button 
                       variant="outline" 
                       size="sm" 
                       onClick={() => {
                         setTemplatePreview(null);
+                        setCssContent(null);
                         setTemplateFile(null);
                       }}
                       className="mt-2"

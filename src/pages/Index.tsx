@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
@@ -14,6 +15,7 @@ const Index = () => {
   const [slides, setSlides] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState("upload");
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [cssTemplate, setCssTemplate] = useState<string | null>(null);
   
   useEffect(() => {
     const apiKey = localStorage.getItem("anthropicApiKey");
@@ -23,42 +25,111 @@ const Index = () => {
     }
   }, []);
   
-  const processFiles = () => {
+  useEffect(() => {
+    if (templateFile && templateFile.name.endsWith('.css')) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        if (e.target && typeof e.target.result === 'string') {
+          setCssTemplate(e.target.result);
+        }
+      };
+      reader.readAsText(templateFile);
+    } else {
+      setCssTemplate(null);
+    }
+  }, [templateFile]);
+  
+  const processFiles = async () => {
     if (!docFile) {
       toast.error("Please upload a document file");
       return;
     }
     
-    const sampleSlides = [
-      {
-        id: 1,
-        title: "Introduction",
-        content: "Welcome to the HTML PPT Generator",
-        type: "title"
-      },
-      {
-        id: 2,
-        title: "Project Overview",
-        content: [
-          "Transform DOC files into HTML presentations",
-          "Apply custom design templates",
-          "Edit with AI assistance",
-          "Export to PowerPoint"
-        ],
-        type: "bullets"
-      },
-      {
-        id: 3,
-        title: "How It Works",
-        content: "Upload your documents, choose a template, and our system will generate a beautiful presentation that you can edit with AI assistance.",
-        type: "text"
-      }
-    ];
+    toast.info("Processing document and generating slides...");
     
-    setSlides(sampleSlides);
-    setCurrentStep(2);
-    setActiveTab("edit");
-    toast.success("Presentation generated successfully!");
+    try {
+      // In a real implementation, we would parse the document here
+      // For now, let's generate more sample slides
+      const sampleSlides = [
+        {
+          id: 1,
+          title: "Introduction",
+          content: "Welcome to the HTML PPT Generator",
+          type: "title"
+        },
+        {
+          id: 2,
+          title: "Project Overview",
+          content: [
+            "Transform DOC files into HTML presentations",
+            "Apply custom design templates",
+            "Edit with AI assistance",
+            "Export to PowerPoint"
+          ],
+          type: "bullets"
+        },
+        {
+          id: 3,
+          title: "How It Works",
+          content: "Upload your documents, choose a template, and our system will generate a beautiful presentation that you can edit with AI assistance.",
+          type: "text"
+        },
+        {
+          id: 4,
+          title: "Key Features",
+          content: [
+            "Document parsing and analysis",
+            "AI-powered content generation",
+            "Custom templating system",
+            "Interactive editing interface",
+            "Multiple export formats"
+          ],
+          type: "bullets"
+        },
+        {
+          id: 5,
+          title: "Document Analysis",
+          content: "Our system analyzes your document structure, headings, and content to create logical slide divisions and maintain the flow of information.",
+          type: "text"
+        },
+        {
+          id: 6,
+          title: "Template System",
+          content: [
+            "Predefined professional templates",
+            "Custom CSS styling support",
+            "Image-based template creation",
+            "Responsive designs for all devices"
+          ],
+          type: "bullets"
+        },
+        {
+          id: 7,
+          title: "Thank You",
+          content: "Thank you for exploring our HTML PPT Generator! We hope you enjoy creating beautiful presentations with ease.",
+          type: "title"
+        }
+      ];
+      
+      // If we have a real document, we would process it here
+      if (docFile) {
+        // Simulate document processing with AI
+        const apiKey = localStorage.getItem("anthropicApiKey");
+        if (apiKey) {
+          // In a real implementation, we would use the Anthropic API to analyze the document
+          // and generate slides based on its content
+          console.log("Would use Anthropic API with key to process document:", docFile.name);
+        }
+      }
+      
+      setSlides(sampleSlides);
+      setCurrentStep(2);
+      setActiveTab("edit");
+      toast.success("Presentation generated successfully!");
+    } catch (error) {
+      console.error("Error processing files:", error);
+      toast.error("Failed to process files. Please try again.");
+    }
   };
   
   const handleExport = () => {
@@ -84,12 +155,16 @@ const Index = () => {
           <PresentationEditor 
             slides={slides} 
             setSlides={setSlides} 
-            onExport={handleExport} 
+            onExport={handleExport}
+            cssTemplate={cssTemplate}
           />
         );
       case "export":
         return (
-          <PresentationExport slides={slides} />
+          <PresentationExport 
+            slides={slides} 
+            cssTemplate={cssTemplate}
+          />
         );
       default:
         return null;

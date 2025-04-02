@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -8,16 +8,17 @@ import { Download, Copy, ExternalLink, FileText, Wand } from "lucide-react";
 
 interface PresentationExportProps {
   slides: any[];
+  cssTemplate?: string | null;
 }
 
-const PresentationExport = ({ slides }: PresentationExportProps) => {
+const PresentationExport = ({ slides, cssTemplate }: PresentationExportProps) => {
   const [exportStatus, setExportStatus] = useState<"idle" | "processing" | "completed">("idle");
   const [exportLink, setExportLink] = useState<string | null>(null);
   const [htmlContent, setHtmlContent] = useState<string>("");
   const [isGeneratingEnhanced, setIsGeneratingEnhanced] = useState(false);
   
   const generateBasicHtmlContent = () => {
-    // Basic HTML generation (same as before)
+    // Generate HTML with custom CSS if a template was provided
     return `
 <!DOCTYPE html>
 <html>
@@ -28,6 +29,7 @@ const PresentationExport = ({ slides }: PresentationExportProps) => {
     .slide { margin-bottom: 50px; padding: 20px; border: 1px solid #ddd; }
     .slide-title { font-size: 24px; margin-bottom: 20px; }
     ul { margin-top: 10px; }
+    ${cssTemplate ? cssTemplate : ''}
   </style>
 </head>
 <body>
@@ -62,6 +64,11 @@ const PresentationExport = ({ slides }: PresentationExportProps) => {
         type: slide.type
       }));
       
+      // Include CSS template if provided
+      const cssPrompt = cssTemplate 
+        ? `\nUse the following CSS as a basis for styling, but enhance it as needed:\n\`\`\`css\n${cssTemplate}\n\`\`\``
+        : "";
+      
       const response = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
         headers: {
@@ -83,7 +90,7 @@ Please create a visually appealing HTML presentation with:
 2. Nice transitions between slides
 3. Proper styling for each slide type
 4. A navigation system
-5. Clean typography
+5. Clean typography${cssPrompt}
 
 Return ONLY the complete HTML code without any explanations or markdown. The HTML should be ready to save as a standalone file.`
             }
@@ -114,10 +121,10 @@ Return ONLY the complete HTML code without any explanations or markdown. The HTM
     }
   };
   
-  // Initialize HTML content on component mount
-  useState(() => {
+  // Initialize HTML content when component mounts or slides/cssTemplate change
+  useEffect(() => {
     setHtmlContent(generateBasicHtmlContent());
-  });
+  }, [slides, cssTemplate]);
   
   const handleExportHTML = () => {
     // Create a Blob from the HTML content
