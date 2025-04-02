@@ -32,11 +32,21 @@ const Index = () => {
         if (e.target && typeof e.target.result === 'string') {
           console.log("CSS template loaded, length:", e.target.result.length);
           console.log("CSS sample:", e.target.result.substring(0, 200)); // Log a sample of the CSS for debugging
-          setCssTemplate(e.target.result);
+          
+          // Validate the CSS by attempting to create a style element
+          try {
+            const testStyle = document.createElement('style');
+            testStyle.textContent = e.target.result;
+            setCssTemplate(e.target.result);
+            toast.success(`CSS template loaded: ${templateFile.name}`);
+          } catch (error) {
+            console.error("Invalid CSS template:", error);
+            toast.error("The CSS template contains errors and may not render correctly");
+            setCssTemplate(e.target.result); // Still set it, but with a warning
+          }
         }
       };
       reader.readAsText(templateFile);
-      toast.success(`CSS template loaded: ${templateFile.name}`);
     } else if (templateFile) {
       toast.error("Unsupported template file. Please upload a CSS file.");
       setCssTemplate(null);

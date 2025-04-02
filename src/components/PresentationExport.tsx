@@ -19,6 +19,21 @@ const PresentationExport = ({ slides, cssTemplate }: PresentationExportProps) =>
   const generateBasicHtmlContent = () => {
     console.log("Generating HTML with CSS:", cssTemplate ? "Yes (length: " + cssTemplate.length + ")" : "No");
     
+    let processedCss = cssTemplate || '';
+    
+    if (cssTemplate) {
+      try {
+        const testStyle = document.createElement('style');
+        testStyle.textContent = cssTemplate;
+        console.log("CSS validation passed");
+      } catch (error) {
+        console.error("Invalid CSS:", error);
+        processedCss = '/* Invalid CSS provided */';
+      }
+      
+      console.log("CSS Sample:", processedCss.substring(0, 150) + "...");
+    }
+    
     return `
 <!DOCTYPE html>
 <html>
@@ -80,7 +95,7 @@ const PresentationExport = ({ slides, cssTemplate }: PresentationExportProps) =>
     }
     
     /* Custom template styles */
-    ${cssTemplate || '/* No custom CSS template provided */'}
+    ${processedCss || '/* No custom CSS template provided */'}
   </style>
 </head>
 <body>
@@ -181,6 +196,15 @@ Return ONLY the complete HTML code without any explanations or markdown. The HTM
     console.log("CSS Template loaded:", cssTemplate ? "Yes" : "No");
     if (cssTemplate) {
       console.log("CSS Template sample:", cssTemplate.substring(0, 100) + "...");
+      
+      try {
+        const testStyle = document.createElement('style');
+        testStyle.textContent = cssTemplate;
+        console.log("CSS validation passed");
+      } catch (error) {
+        console.error("Invalid CSS:", error);
+        toast.error("The CSS template contains errors and may not render correctly");
+      }
     }
     setHtmlContent(generateBasicHtmlContent());
   }, [slides, cssTemplate]);

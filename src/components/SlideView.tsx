@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useEffect, useRef } from "react";
 
 interface SlideViewProps {
   slide: {
@@ -11,14 +11,33 @@ interface SlideViewProps {
 }
 
 const SlideView = ({ slide, cssTemplate }: SlideViewProps) => {
-  // Create a style element with the custom CSS if provided
-  const customStyle = cssTemplate ? (
-    <style dangerouslySetInnerHTML={{ __html: cssTemplate }} />
-  ) : null;
+  const slideRef = useRef<HTMLDivElement>(null);
+
+  // Apply CSS styles when the component mounts or cssTemplate changes
+  useEffect(() => {
+    if (!slideRef.current || !cssTemplate) return;
+    
+    try {
+      // Apply the custom CSS to the slide container
+      const styleElement = document.createElement('style');
+      styleElement.textContent = cssTemplate;
+      
+      // Remove any previous custom styles before adding new ones
+      const existingStyles = slideRef.current.querySelectorAll('style[data-custom-css]');
+      existingStyles.forEach(style => style.remove());
+      
+      // Add the data attribute to identify this as a custom style
+      styleElement.setAttribute('data-custom-css', 'true');
+      slideRef.current.appendChild(styleElement);
+      
+      console.log("CSS applied to slide:", cssTemplate.substring(0, 100) + "...");
+    } catch (error) {
+      console.error("Error applying CSS to slide:", error);
+    }
+  }, [cssTemplate]);
 
   return (
-    <div className="slide-container">
-      {customStyle}
+    <div className="slide-container" ref={slideRef}>
       <div className="slide bg-white rounded-lg shadow-lg p-8 max-w-4xl mx-auto aspect-video flex flex-col relative">
         <h2 className="slide-title text-3xl font-bold mb-6">{slide.title}</h2>
         

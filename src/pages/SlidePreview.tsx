@@ -1,8 +1,10 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import SlideView from "@/components/SlideView";
+import { toast } from "sonner";
 
 const SlidePreview = () => {
   const navigate = useNavigate();
@@ -23,6 +25,8 @@ const SlidePreview = () => {
           setCurrentSlideIndex(location.state.startIndex);
         }
         if (location.state.cssTemplate) {
+          console.log("CSS template received from state:", 
+            location.state.cssTemplate ? location.state.cssTemplate.substring(0, 100) + "..." : "None");
           setCssTemplate(location.state.cssTemplate);
         }
         return;
@@ -39,7 +43,9 @@ const SlidePreview = () => {
       }
       
       if (encodedCss) {
-        setCssTemplate(atob(encodedCss));
+        const decodedCss = atob(encodedCss);
+        console.log("Decoded CSS from URL:", decodedCss.substring(0, 100) + "...");
+        setCssTemplate(decodedCss);
       }
       
       // Fallback to demo slides if no slides found
@@ -72,6 +78,7 @@ const SlidePreview = () => {
       }
     } catch (error) {
       console.error("Error parsing slides:", error);
+      toast.error("Error loading presentation. Returning to home page.");
       navigate("/");
     }
   }, [location, navigate]);
