@@ -1,9 +1,11 @@
-import { useState, useEffect } from "react";
+
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Download, Copy, ExternalLink, FileText, Wand } from "lucide-react";
+import { Download, Copy, Wand, FileText } from "lucide-react";
+import HTMLToPPTX from "html-to-pptx";
 
 interface PresentationExportProps {
   slides: any[];
@@ -12,9 +14,9 @@ interface PresentationExportProps {
 
 const PresentationExport = ({ slides, cssTemplate }: PresentationExportProps) => {
   const [exportStatus, setExportStatus] = useState<"idle" | "processing" | "completed">("idle");
-  const [exportLink, setExportLink] = useState<string | null>(null);
   const [htmlContent, setHtmlContent] = useState<string>("");
   const [isGeneratingEnhanced, setIsGeneratingEnhanced] = useState(false);
+  const presentationRef = useRef<HTMLDivElement>(null);
   
   const generateBasicHtmlContent = () => {
     console.log("Generating HTML with CSS:", cssTemplate ? "Yes (length: " + cssTemplate.length + ")" : "No");
@@ -225,14 +227,57 @@ Return ONLY the complete HTML code without any explanations or markdown. The HTM
     toast.success("HTML presentation exported successfully");
   };
   
-  const handleExportPPT = () => {
+  const handleExportPPT = async () => {
     setExportStatus("processing");
     
-    setTimeout(() => {
+    try {
+      // Create a temporary div to render the HTML content
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = htmlContent;
+      document.body.appendChild(tempDiv);
+      
+      // Get all slide elements
+      const slideElements = tempDiv.querySelectorAll('.slide');
+      
+      // Create HTML to PPTX converter instance
+      const pptx = new HTMLToPPTX();
+      
+      // Create slides
+      await Promise.all(Array.from(slideElements).map(async (slide, index) => {
+        // Get title and content from the slide
+        const title = slide.querySelector('.slide-title')?.textContent || '';
+        
+        // Add the slide to the presentation
+        await pptx.addSlide(slide as HTMLElement, {
+          filename: `slide-${index + 1}`,
+          widthInches: 10,
+          heightInches: 5.625, // 16:9 aspect ratio
+        });
+      }));
+      
+      // Generate and download the PPTX file
+      const pptBlob = await pptx.toBlob();
+      const url = URL.createObjectURL(pptBlob);
+      
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "presentation.pptx";
+      document.body.appendChild(a);
+      a.click();
+      
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      // Clean up
+      document.body.removeChild(tempDiv);
+      
       setExportStatus("completed");
-      setExportLink("https://example.com/download/presentation.pptx");
-      toast.success("PowerPoint presentation generated successfully");
-    }, 2000);
+      toast.success("PowerPoint presentation exported successfully");
+    } catch (error) {
+      console.error("Error generating PowerPoint:", error);
+      toast.error("Failed to generate PowerPoint. Please try again.");
+      setExportStatus("idle");
+    }
   };
   
   const handleCopyHTML = () => {
@@ -310,7 +355,7 @@ Return ONLY the complete HTML code without any explanations or markdown. The HTM
             </div>
             
             <p className="text-sm text-muted-foreground mb-4">
-              Convert your HTML presentation to a PowerPoint (PPTX) file. This uses a third-party service to perform the conversion.
+              Convert your HTML presentation to a PowerPoint (PPTX) file directly in your browser.
             </p>
             
             <div className="mt-6">
@@ -328,17 +373,15 @@ Return ONLY the complete HTML code without any explanations or markdown. The HTM
                 </Button>
               )}
               
-              {exportStatus === "completed" && exportLink && (
+              {exportStatus === "completed" && (
                 <div className="space-y-4">
                   <p className="text-sm text-green-600">
                     PowerPoint file generated successfully!
                   </p>
                   
-                  <Button asChild>
-                    <a href={exportLink} target="_blank" rel="noopener noreferrer">
-                      <Download className="mr-2 h-4 w-4" />
-                      Download PowerPoint
-                    </a>
+                  <Button onClick={handleExportPPT}>
+                    <Download className="mr-2 h-4 w-4" />
+                    Download PowerPoint
                   </Button>
                 </div>
               )}
@@ -370,6 +413,9 @@ Return ONLY the complete HTML code without any explanations or markdown. The HTM
           </CardContent>
         </Card>
       </div>
+      
+      {/* Hidden div for rendering HTML content for PowerPoint export */}
+      <div ref={presentationRef} style={{ display: 'none' }}></div>
     </div>
   );
 };
