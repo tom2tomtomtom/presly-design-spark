@@ -479,7 +479,16 @@ const PresentationExport = ({ slides, cssTemplate }: PresentationExportProps) =>
         toast.error("The CSS template contains errors and may not render correctly");
       }
     }
-    setHtmlContent(generateBasicHtmlContent());
+    
+    // Check if we have generated HTML from the new workflow
+    const savedHTML = localStorage.getItem("generatedPresentationHTML");
+    if (savedHTML) {
+      setHtmlContent(savedHTML);
+      console.log("Using generated HTML for export");
+    } else {
+      setHtmlContent(generateBasicHtmlContent());
+      console.log("Using basic HTML for export");
+    }
   }, [slides, cssTemplate]);
   
   const handleExportHTML = () => {

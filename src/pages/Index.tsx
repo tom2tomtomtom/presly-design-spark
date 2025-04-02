@@ -163,6 +163,8 @@ const Index = () => {
   const handleExport = () => {
     setCurrentStep(3);
     setActiveTab("export");
+    // Pass the generated HTML to the export component
+    localStorage.setItem("generatedPresentationHTML", generatedHTML);
     toast.success("Preparing your presentation for export");
   };
   
