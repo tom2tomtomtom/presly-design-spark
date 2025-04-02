@@ -1,3 +1,4 @@
+
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -24,12 +25,14 @@ interface PresentationEditorProps {
   slides: any[];
   setSlides: (slides: any[]) => void;
   onExport: () => void;
+  cssTemplate?: string | null;
 }
 
 const PresentationEditor = ({ 
   slides, 
   setSlides, 
-  onExport 
+  onExport,
+  cssTemplate
 }: PresentationEditorProps) => {
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [editMode, setEditMode] = useState(false);
