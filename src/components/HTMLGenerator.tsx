@@ -88,6 +88,145 @@ const HTMLGenerator = ({ slides, cssTemplate, onHTMLGenerated }: HTMLGeneratorPr
     startGeneration();
   };
 
+  // Function to modify the raw HTML template with our slide content
+  const modifyRawHtmlWithSlideContent = (rawHtml: string, slides: any[]): string => {
+    try {
+      // Parse the raw HTML
+      const parser = new DOMParser();
+      const templateDoc = parser.parseFromString(rawHtml, 'text/html');
+      
+      // Find the slide container element
+      const slideContainer = templateDoc.querySelector('.slides-container') || 
+                             templateDoc.querySelector('.presentation-container');
+                             
+      if (!slideContainer) {
+        console.error("Could not find slide container in template");
+        return rawHtml; // Return original if we can't find a container
+      }
+      
+      // Clear existing slides but save one as a template
+      const originalSlides = slideContainer.querySelectorAll('.slide');
+      if (originalSlides.length === 0) {
+        console.error("No slide templates found in raw HTML");
+        return rawHtml;
+      }
+      
+      // Extract templates for different slide types
+      const slideTemplates: Record<string, Element> = {};
+      
+      // Find title/first slide template
+      const titleSlideTemplate = Array.from(originalSlides).find(slide => 
+        slide.classList.contains('title-slide') || slide.id === 'slide-1'
+      );
+      if (titleSlideTemplate) slideTemplates.title = titleSlideTemplate;
+      
+      // Find bullet slide template
+      const bulletSlideTemplate = Array.from(originalSlides).find(slide =>
+        slide.querySelector('.slide-points') || 
+        slide.querySelector('.slide-bullet-list') ||
+        slide.querySelector('ul')
+      );
+      if (bulletSlideTemplate) slideTemplates.bullets = bulletSlideTemplate;
+      
+      // Find two-column slide template
+      const twoColumnTemplate = Array.from(originalSlides).find(slide =>
+        slide.querySelector('.two-columns')
+      );
+      if (twoColumnTemplate) slideTemplates.twoColumn = twoColumnTemplate;
+      
+      // Find thank you / closing slide template
+      const closingTemplate = Array.from(originalSlides).find(slide =>
+        slide.textContent?.includes('Thank You')
+      );
+      if (closingTemplate) slideTemplates.closing = closingTemplate;
+      
+      // Default/content slide template - use the first one if nothing specific is found
+      if (!slideTemplates.content && originalSlides.length > 0) {
+        slideTemplates.content = originalSlides[0];
+      }
+      
+      // Clear all slides from the container
+      slideContainer.innerHTML = '';
+      
+      // Add our slides using the templates
+      slides.forEach((slide, index) => {
+        let template;
+        
+        // Select appropriate template for this slide
+        if (slide.type === 'title' && index === 0 && slideTemplates.title) {
+          template = slideTemplates.title.cloneNode(true) as Element;
+        } else if (slide.type === 'title' && index === slides.length - 1 && slideTemplates.closing) {
+          template = slideTemplates.closing.cloneNode(true) as Element;
+        } else if (slide.type === 'bullets' && slideTemplates.bullets) {
+          template = slideTemplates.bullets.cloneNode(true) as Element;
+        } else if (slide.type === 'twoColumn' && slideTemplates.twoColumn) {
+          template = slideTemplates.twoColumn.cloneNode(true) as Element;
+        } else if (slideTemplates.content) {
+          template = slideTemplates.content.cloneNode(true) as Element;
+        } else {
+          // Fallback if no matching template
+          template = originalSlides[0].cloneNode(true) as Element;
+        }
+        
+        // Set slide ID and class
+        template.id = `slide-${index + 1}`;
+        if (index === 0) {
+          template.classList.add('active');
+        } else {
+          template.classList.remove('active');
+        }
+        
+        // Update slide content
+        // First update the title
+        const titleElement = template.querySelector('.slide-title') || 
+                            template.querySelector('h1') || 
+                            template.querySelector('h2');
+                            
+        if (titleElement) {
+          titleElement.textContent = slide.title;
+        }
+        
+        // Then update content based on slide type
+        if (slide.type === 'bullets' && Array.isArray(slide.content)) {
+          // Update bullet list
+          const bulletList = template.querySelector('.slide-points') || 
+                            template.querySelector('.slide-bullet-list') || 
+                            template.querySelector('ul');
+                            
+          if (bulletList) {
+            bulletList.innerHTML = slide.content.map((item: string) => 
+              `<li>${item}</li>`
+            ).join('');
+          }
+        } else if (typeof slide.content === 'string') {
+          // Update text content
+          const contentElement = template.querySelector('.slide-text') || 
+                                template.querySelector('.slide-content p') || 
+                                template.querySelector('p');
+                                
+          if (contentElement) {
+            contentElement.textContent = slide.content;
+          }
+        }
+        
+        // Add the modified slide to the container
+        slideContainer.appendChild(template);
+      });
+      
+      // Update slide counter if it exists
+      const slideCounter = templateDoc.getElementById('slide-counter');
+      if (slideCounter) {
+        slideCounter.textContent = `Slide 1/${slides.length}`;
+      }
+      
+      // Convert back to string
+      return templateDoc.documentElement.outerHTML;
+    } catch (error) {
+      console.error("Error modifying raw HTML:", error);
+      return rawHtml; // Return original on error
+    }
+  };
+
   // Generates a complete HTML file with navigation, styling and interactions
   const generateCompleteHTML = (slides: any[], css: string | null = null) => {
     // Process CSS styles
@@ -105,6 +244,38 @@ const HTMLGenerator = ({ slides, cssTemplate, onHTMLGenerated }: HTMLGeneratorPr
 
     // Extract potential theme colors from CSS
     const accentColor = processedCss?.match(/--accent-color:\s*([^;]*)/)?.[1]?.trim() || '#3498db';
+    
+    // Check if raw HTML template is available
+    const rawHtmlTemplate = localStorage.getItem('rawHtmlTemplate');
+    if (rawHtmlTemplate) {
+      console.log("Found raw HTML template, using directly");
+      
+      try {
+        // Extract the body and style tags from the raw template
+        const parser = new DOMParser();
+        const templateDoc = parser.parseFromString(rawHtmlTemplate, 'text/html');
+        
+        // Extract all style tags
+        const styles = templateDoc.querySelectorAll('style');
+        let extractedCss = '';
+        styles.forEach(style => {
+          extractedCss += style.textContent + '\n\n';
+        });
+        
+        // Apply the CSS and customize with slides
+        if (extractedCss) {
+          processedCss = extractedCss;
+          console.log("Using styles from raw HTML template");
+          
+          // We'll use custom templating from the raw HTML
+          // Find and extract the slide template structure
+          // But we'll handle this in the slide mapping section
+          return modifyRawHtmlWithSlideContent(rawHtmlTemplate, slides);
+        }
+      } catch (error) {
+        console.error("Error processing raw HTML template:", error);
+      }
+    }
     
     // Check if custom slide templates are available from localStorage
     let slideTemplates: any = null;

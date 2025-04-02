@@ -183,6 +183,10 @@ const FileUploadStep = ({
                 toast.success(`Template loaded with ${Object.keys(slideTemplates).length} slide types`);
               }
               
+              // Store the raw HTML template in localStorage for direct use
+              localStorage.setItem('rawHtmlTemplate', htmlContent);
+              console.log("Raw HTML template stored (length: " + htmlContent.length + " chars)");
+              
               // Create a preview with the first slide
               setTemplatePreview(`data:text/html;charset=utf-8,${encodeURIComponent(htmlContent)}`);
             } else {

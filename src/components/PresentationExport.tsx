@@ -579,10 +579,27 @@ const PresentationExport = ({ slides, cssTemplate }: PresentationExportProps) =>
       const pres = new pptxgen();
       
       // Add presentation-wide properties based on CSS
-      // Extract accent color from CSS for styling
-      const accentColorMatch = cssTemplate?.match(/--accent-color:\s*([^;]*)/);
-      const accentColor = accentColorMatch ? accentColorMatch[1].trim() : '#3498db';
+      // Extract ALL color variables from CSS for comprehensive styling
+      const varMatches = cssTemplate?.match(/--[a-zA-Z0-9-]+:\s*([^;]*);/g) || [];
+      const cssVars: Record<string, string> = {};
+      
+      varMatches.forEach(match => {
+        const parts = match.split(':');
+        if (parts.length >= 2) {
+          const name = parts[0].trim();
+          const value = parts[1].replace(';', '').trim();
+          cssVars[name] = value;
+        }
+      });
+      
+      // Get key colors with fallbacks
+      const accentColor = cssVars['--accent-color'] || cssVars['--primary'] || '#3498db';
+      const secondaryColor = cssVars['--secondary'] || cssVars['--accent'] || '#03dac6';
+      const textColor = cssVars['--text-dark'] || cssVars['--dark'] || '#333333';
+      const bgColor = cssVars['--bg-color'] || cssVars['--light'] || '#FFFFFF';
+      
       console.log(`Using accent color from CSS: ${accentColor}`);
+      console.log(`Found ${Object.keys(cssVars).length} CSS variables for styling`);
       
       // Set presentation-wide properties
       pres.layout = 'LAYOUT_16x9';
@@ -591,12 +608,31 @@ const PresentationExport = ({ slides, cssTemplate }: PresentationExportProps) =>
       pres.subject = 'Generated Presentation';
       pres.title = 'HTML Generated Presentation';
       
-      // Create a master slide with the accent color but no placeholders
-      // to avoid conflicts with manually added content
+      // Create a master slide with proper styling from CSS variables
+      // Convert colors to proper hex without # for PowerPoint
+      const bgColorHex = bgColor.replace('#', '');
+      const accentColorHex = accentColor.replace('#', '');
+      const textColorHex = textColor.replace('#', '');
+      
+      // Add a comprehensive slide master with proper styling
       pres.defineSlideMaster({
         title: 'MASTER_SLIDE',
-        background: { color: 'FFFFFF' },
-        objects: [] // Remove placeholders to avoid conflicts
+        background: { color: bgColorHex },
+        objects: [
+          { 'placeholder': { 
+            'options': { 
+              name: 'title', 
+              type: 'title', 
+              x: 0.5, y: 0.5, w: '90%', h: 1.0,
+              align: 'left', 
+              bold: true, 
+              fontSize: 24, 
+              color: accentColorHex,
+              fontFace: cssVars['--font-heading'] || 'Arial'
+            } 
+          }}
+        ],
+        slideNumber: { x: 0.5, y: '90%', color: textColorHex }
       });
       
       // Get the HTML content - either from localStorage or from state
@@ -651,15 +687,15 @@ const PresentationExport = ({ slides, cssTemplate }: PresentationExportProps) =>
           // Create slide with a specific layout
           const pptSlide = pres.addSlide({ masterName: 'MASTER_SLIDE' });
           
-          // Add title using accent color
+          // Add title using accent color and font from CSS
           pptSlide.addText(slideTitle, { 
             x: 0.5, 
             y: 0.5, 
             w: '90%', 
             fontSize: 28,
             bold: true,
-            fontFace: 'Arial',
-            color: accentColor.replace('#', '')
+            fontFace: cssVars['--font-heading'] || 'Arial',
+            color: accentColorHex
           });
           
           // Get content from the HTML (this content element is already declared above)
@@ -715,7 +751,8 @@ const PresentationExport = ({ slides, cssTemplate }: PresentationExportProps) =>
                     w: '90%',
                     bullet: true,
                     fontSize: 16,
-                    color: bulletColor
+                    color: bulletColor,
+                    fontFace: cssVars['--font-body'] || 'Arial'
                   });
                 });
               }
@@ -820,7 +857,8 @@ const PresentationExport = ({ slides, cssTemplate }: PresentationExportProps) =>
                         y: 1.5,
                         w: '90%',
                         fontSize: 16,
-                        color: '4a4a4a'
+                        color: textColorHex,
+                        fontFace: cssVars['--font-body'] || 'Arial'
                       });
                     } else {
                       // Join paragraphs with newlines instead of using array
@@ -829,7 +867,8 @@ const PresentationExport = ({ slides, cssTemplate }: PresentationExportProps) =>
                         y: 1.5,
                         w: '90%',
                         fontSize: 16,
-                        color: '4a4a4a'
+                        color: textColorHex,
+                        fontFace: cssVars['--font-body'] || 'Arial'
                       });
                     }
                   }
@@ -841,7 +880,8 @@ const PresentationExport = ({ slides, cssTemplate }: PresentationExportProps) =>
                       y: 1.5,
                       w: '90%',
                       fontSize: 16,
-                      color: '4a4a4a'
+                      color: textColorHex,
+                      fontFace: cssVars['--font-body'] || 'Arial'
                     });
                   }
                 }
@@ -849,13 +889,15 @@ const PresentationExport = ({ slides, cssTemplate }: PresentationExportProps) =>
             }
           }
           
-          // Add slide number
+          // Add slide number with secondary color
+          const secondaryColorHex = secondaryColor.replace('#', '');
           pptSlide.addText(`Slide ${index + 1}/${htmlSlides.length}`, {
             x: 0.5,
             y: 6.5,
             w: 2,
             fontSize: 10,
-            color: '9e9e9e'
+            fontFace: cssVars['--font-body'] || 'Arial',
+            color: secondaryColorHex
           });
         });
       } else {
