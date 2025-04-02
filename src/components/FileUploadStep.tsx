@@ -9,6 +9,81 @@ import TemplateGallery from "./TemplateGallery";
 import { useStyle } from "@/lib/StyleContext";
 import { toast } from "sonner";
 
+// Function to extract CSS from HTML content
+const extractCSSFromHTML = (htmlContent: string): string | null => {
+  // Create a temporary DOM element to parse the HTML
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(htmlContent, 'text/html');
+  
+  // Extract all style tags
+  const styleTags = doc.querySelectorAll('style');
+  if (styleTags.length === 0) return null;
+  
+  // Combine all CSS content
+  let combinedCSS = '';
+  styleTags.forEach(style => {
+    combinedCSS += style.textContent + '\n\n';
+  });
+  
+  return combinedCSS;
+};
+
+// Slide template type interface
+interface SlideTemplates {
+  title?: string;  // HTML structure for title slides
+  bullets?: string; // HTML structure for bullet slides
+  content?: string; // HTML structure for content slides
+  twoColumn?: string; // HTML structure for two-column slides
+  closing?: string; // HTML structure for closing/thank you slides
+}
+
+// Function to extract slide templates from HTML
+const extractSlideTemplates = (htmlContent: string): SlideTemplates | null => {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(htmlContent, 'text/html');
+  
+  // Find slides in the document
+  const slides = doc.querySelectorAll('.slide');
+  if (slides.length === 0) return null;
+  
+  const templates: SlideTemplates = {};
+  
+  // Process each slide to identify its type
+  slides.forEach(slide => {
+    // Clone the slide to capture its HTML structure
+    const slideClone = slide.cloneNode(true) as HTMLElement;
+    
+    // Determine slide type based on content or class
+    if (slide.classList.contains('title-slide') || 
+        slide.id === 'slide-1' || 
+        slideClone.textContent?.includes('Thank You')) {
+      // This is either a title or closing slide
+      if (slideClone.textContent?.includes('Thank You') || 
+          slideClone.querySelector('h1')?.textContent?.includes('Thank You')) {
+        templates.closing = slideClone.outerHTML;
+      } else {
+        templates.title = slideClone.outerHTML;
+      }
+    } 
+    else if (slide.querySelector('.slide-points') || 
+             slide.querySelector('.slide-bullet-list') ||
+             slide.querySelector('ul')) {
+      // This is a bullet points slide
+      templates.bullets = slideClone.outerHTML;
+    }
+    else if (slide.querySelector('.two-columns')) {
+      // This is a two-column layout
+      templates.twoColumn = slideClone.outerHTML;
+    }
+    else {
+      // Default to content slide
+      templates.content = slideClone.outerHTML;
+    }
+  });
+  
+  return templates;
+};
+
 interface FileUploadStepProps {
   docFile: File | null;
   setDocFile: (file: File | null) => void;
@@ -85,6 +160,38 @@ const FileUploadStep = ({
           }
         };
         reader.readAsText(file);
+      }
+      // Handle HTML template files
+      else if (file.name.endsWith('.html')) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          if (e.target && typeof e.target.result === 'string') {
+            const htmlContent = e.target.result;
+            
+            // Extract CSS from the HTML file
+            const extractedCSS = extractCSSFromHTML(htmlContent);
+            
+            // Extract slide templates from HTML
+            const slideTemplates = extractSlideTemplates(htmlContent);
+            
+            if (extractedCSS) {
+              setCssContent(extractedCSS);
+              
+              // Store slide templates in localStorage for later use
+              if (slideTemplates && Object.keys(slideTemplates).length > 0) {
+                localStorage.setItem('slideTemplates', JSON.stringify(slideTemplates));
+                toast.success(`Template loaded with ${Object.keys(slideTemplates).length} slide types`);
+              }
+              
+              // Create a preview with the first slide
+              setTemplatePreview(`data:text/html;charset=utf-8,${encodeURIComponent(htmlContent)}`);
+            } else {
+              toast.error("No CSS styles found in the HTML template");
+            }
+          }
+        };
+        reader.readAsText(file);
+      }
       }
     }
   };

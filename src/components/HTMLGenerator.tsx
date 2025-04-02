@@ -106,6 +106,18 @@ const HTMLGenerator = ({ slides, cssTemplate, onHTMLGenerated }: HTMLGeneratorPr
     // Extract potential theme colors from CSS
     const accentColor = processedCss?.match(/--accent-color:\s*([^;]*)/)?.[1]?.trim() || '#3498db';
     
+    // Check if custom slide templates are available from localStorage
+    let slideTemplates: any = null;
+    try {
+      const templatesJson = localStorage.getItem('slideTemplates');
+      if (templatesJson) {
+        slideTemplates = JSON.parse(templatesJson);
+        console.log("Using custom slide templates:", Object.keys(slideTemplates));
+      }
+    } catch (error) {
+      console.error("Error loading slide templates:", error);
+    }
+    
     return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -370,7 +382,63 @@ const HTMLGenerator = ({ slides, cssTemplate, onHTMLGenerated }: HTMLGeneratorPr
 </head>
 <body>
   <div class="presentation-container">
-    ${slides.map((slide, index) => `
+    ${slides.map((slide, index) => {
+      // If we have custom templates, use the appropriate one based on slide type
+      if (slideTemplates) {
+        // Helper function to replace content in template
+        const replaceTemplateContent = (template, slide, index) => {
+          // Create temporary DOM element to manipulate
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(template, 'text/html');
+          const slideElement = doc.querySelector('.slide');
+          
+          if (!slideElement) return template; // Return original if structure not found
+          
+          // Update slide index and class
+          slideElement.id = `slide-${index + 1}`;
+          if (index === 0) slideElement.classList.add('active');
+          
+          // Update slide title
+          const titleElement = slideElement.querySelector('.slide-title, h1, h2');
+          if (titleElement) titleElement.textContent = slide.title;
+          
+          // Update slide content based on type
+          if (slide.type === 'bullets' && Array.isArray(slide.content)) {
+            // Find bullet container
+            const bulletContainer = slideElement.querySelector('.slide-points, .slide-bullet-list, ul');
+            if (bulletContainer) {
+              bulletContainer.innerHTML = slide.content.map(item => `<li>${item}</li>`).join('');
+            }
+          } else if (typeof slide.content === 'string') {
+            // Find content container
+            const contentElement = slideElement.querySelector('.slide-content p, .slide-text, p');
+            if (contentElement) {
+              contentElement.textContent = slide.content;
+            }
+          }
+          
+          return slideElement.outerHTML;
+        };
+        
+        // Select appropriate template based on slide type
+        let template;
+        if (slide.type === 'title' && index === 0 && slideTemplates.title) {
+          template = slideTemplates.title;
+        } else if (slide.type === 'title' && index === slides.length - 1 && slideTemplates.closing) {
+          template = slideTemplates.closing;
+        } else if (slide.type === 'bullets' && slideTemplates.bullets) {
+          template = slideTemplates.bullets;
+        } else if (slideTemplates.content) {
+          template = slideTemplates.content;
+        }
+        
+        if (template) {
+          return replaceTemplateContent(template, slide, index);
+        }
+      }
+      
+      // Fallback to default template if no custom template is available
+      return `
       <div id="slide-${index + 1}" class="slide ${index === 0 ? 'active' : ''} ${slide.type === 'title' ? 'title-slide' : ''}">
         <div class="slide-inner">
           <h2 class="slide-title">${slide.title}</h2>
@@ -388,7 +456,8 @@ const HTMLGenerator = ({ slides, cssTemplate, onHTMLGenerated }: HTMLGeneratorPr
           </div>
         </div>
       </div>
-    `).join('')}
+      `;
+    }).join('')}
   </div>
   
   <div class="progress-bar" id="progress-bar"></div>
