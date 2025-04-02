@@ -17,6 +17,14 @@ import pptxgen from 'pptxgenjs';
 import HtmlToPptx from 'html-to-pptx';
 import { handleError, ErrorType } from "@/lib/error";
 
+// Helper function to convert RGB to Hex for PowerPoint colors
+function rgbToHex(r: number, g: number, b: number): string {
+  return '#' + [r, g, b].map(x => {
+    const hex = x.toString(16);
+    return hex.length === 1 ? '0' + hex : hex;
+  }).join('');
+}
+
 interface PresentationExportProps {
   slides: any[];
   cssTemplate?: string | null;
@@ -527,85 +535,196 @@ const PresentationExport = ({ slides, cssTemplate }: PresentationExportProps) =>
   // Fallback method using PptxGenJS directly
   const exportWithPptxGenJs = async () => {
     try {
-      console.log("Creating PowerPoint with PptxGenJS");
+      console.log("Creating PowerPoint with PptxGenJS from HTML content");
       
       // Create a new instance of PptxGenJS
       const pres = new pptxgen();
       
-      console.log("Processing slides from data directly");
+      // Create a DOMParser to extract content from the HTML
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(htmlContent, 'text/html');
       
-      // Always use the direct slides data approach for reliability
-      for (const slide of slides) {
-        console.log(`Processing slide: ${slide.title}`);
+      // Find all slides in the HTML content
+      const htmlSlides = doc.querySelectorAll('.slide');
+      console.log(`Found ${htmlSlides.length} slides in HTML`);
+      
+      if (htmlSlides.length > 0) {
+        console.log("Processing slides from HTML content");
         
-        // Add a new slide
-        const pptSlide = pres.addSlide();
-        
-        // Set slide title
-        pptSlide.addText(slide.title, { 
-          x: 0.5, 
-          y: 0.5, 
-          w: '90%', 
-          fontSize: 24,
-          bold: true,
-          color: '363636'
-        });
-        
-        // Add content based on slide type
-        if (slide.type === 'bullets' && Array.isArray(slide.content)) {
-          console.log(`Adding ${slide.content.length} bullet points`);
+        // Process each slide in the HTML
+        htmlSlides.forEach((htmlSlide, index) => {
+          // Get the slide title from HTML
+          const titleElement = htmlSlide.querySelector('.slide-title');
+          const slideTitle = titleElement ? titleElement.textContent || `Slide ${index + 1}` : `Slide ${index + 1}`;
+          console.log(`Processing HTML slide: ${slideTitle}`);
           
-          // For bullet points
-          slide.content.forEach((item, index) => {
-            if (item) {
-              pptSlide.addText(item, {
+          // Add a new slide to the PowerPoint
+          const pptSlide = pres.addSlide();
+          
+          // Get title style from CSS if possible
+          let titleColor = '363636'; // Default color
+          if (titleElement) {
+            const computedStyle = getComputedStyle(titleElement);
+            const titleColorStyle = computedStyle.color || '';
+            // Try to extract hex color if possible
+            const colorMatch = titleColorStyle.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+            if (colorMatch) {
+              const [, r, g, b] = colorMatch;
+              titleColor = rgbToHex(parseInt(r), parseInt(g), parseInt(b));
+              console.log(`Using title color from HTML: ${titleColor}`);
+            }
+          }
+          
+          // Add title to the slide
+          pptSlide.addText(slideTitle, { 
+            x: 0.5, 
+            y: 0.5, 
+            w: '90%', 
+            fontSize: 24,
+            bold: true,
+            color: titleColor.replace('#', '')
+          });
+          
+          // Get content from the HTML
+          const contentElement = htmlSlide.querySelector('.slide-content');
+          if (contentElement) {
+            // Check for bullet lists
+            const bulletList = contentElement.querySelector('.slide-bullet-list');
+            if (bulletList) {
+              const bullets = bulletList.querySelectorAll('li');
+              console.log(`Adding ${bullets.length} HTML bullet points`);
+              
+              bullets.forEach((bullet, bulletIndex) => {
+                const bulletText = bullet.textContent || '';
+                if (bulletText.trim()) {
+                  pptSlide.addText(bulletText, {
+                    x: 0.5,
+                    y: 1.5 + (bulletIndex * 0.5),
+                    w: '90%',
+                    bullet: true,
+                    fontSize: 16,
+                    color: '4a4a4a'
+                  });
+                }
+              });
+            } else {
+              console.log("Adding HTML text content");
+              
+              // Get paragraphs or direct text content
+              const paragraphs = contentElement.querySelectorAll('p');
+              if (paragraphs.length > 0) {
+                paragraphs.forEach((paragraph, paragraphIndex) => {
+                  const paragraphText = paragraph.textContent || '';
+                  if (paragraphText.trim()) {
+                    pptSlide.addText(paragraphText, {
+                      x: 0.5,
+                      y: 1.5 + (paragraphIndex * 0.8),
+                      w: '90%',
+                      fontSize: 16,
+                      color: '4a4a4a'
+                    });
+                  }
+                });
+              } else {
+                const contentText = contentElement.textContent || '';
+                if (contentText.trim()) {
+                  pptSlide.addText(contentText, {
+                    x: 0.5,
+                    y: 1.5,
+                    w: '90%',
+                    fontSize: 16,
+                    color: '4a4a4a'
+                  });
+                }
+              }
+            }
+          }
+          
+          // Add slide number
+          pptSlide.addText(`Slide ${index + 1}`, {
+            x: 0.5,
+            y: 6.5,
+            w: 2,
+            fontSize: 10,
+            color: '9e9e9e'
+          });
+        });
+      } else {
+        console.log("No slides found in HTML, using slide data directly");
+        
+        // Fallback to direct slide data if HTML parsing fails
+        for (const slide of slides) {
+          console.log(`Processing slide from data: ${slide.title}`);
+          
+          // Add a new slide
+          const pptSlide = pres.addSlide();
+          
+          // Set slide title
+          pptSlide.addText(slide.title, { 
+            x: 0.5, 
+            y: 0.5, 
+            w: '90%', 
+            fontSize: 24,
+            bold: true,
+            color: '363636'
+          });
+          
+          // Add content based on slide type
+          if (slide.type === 'bullets' && Array.isArray(slide.content)) {
+            console.log(`Adding ${slide.content.length} bullet points from data`);
+            
+            // For bullet points
+            slide.content.forEach((item, index) => {
+              if (item) {
+                pptSlide.addText(item, {
+                  x: 0.5,
+                  y: 1.5 + (index * 0.5),
+                  w: '90%',
+                  bullet: true,
+                  fontSize: 16,
+                  color: '4a4a4a'
+                });
+              }
+            });
+          } else if (slide.type === 'title') {
+            console.log("Adding title slide content from data");
+            
+            // For title slides
+            if (typeof slide.content === 'string' && slide.content) {
+              pptSlide.addText(slide.content, {
                 x: 0.5,
-                y: 1.5 + (index * 0.5),
+                y: 3,
                 w: '90%',
-                bullet: true,
+                h: 1,
+                align: 'center',
+                fontSize: 20,
+                color: '4a4a4a'
+              });
+            }
+          } else {
+            console.log("Adding text slide content from data");
+            
+            // For text slides
+            if (typeof slide.content === 'string' && slide.content) {
+              pptSlide.addText(slide.content, {
+                x: 0.5,
+                y: 1.5,
+                w: '90%',
                 fontSize: 16,
                 color: '4a4a4a'
               });
             }
+          }
+          
+          // Add slide number
+          pptSlide.addText(`Slide ${slide.id}`, {
+            x: 0.5,
+            y: 6.5,
+            w: 2,
+            fontSize: 10,
+            color: '9e9e9e'
           });
-        } else if (slide.type === 'title') {
-          console.log("Adding title slide content");
-          
-          // For title slides
-          if (typeof slide.content === 'string' && slide.content) {
-            pptSlide.addText(slide.content, {
-              x: 0.5,
-              y: 3,
-              w: '90%',
-              h: 1,
-              align: 'center',
-              fontSize: 20,
-              color: '4a4a4a'
-            });
-          }
-        } else {
-          console.log("Adding text slide content");
-          
-          // For text slides
-          if (typeof slide.content === 'string' && slide.content) {
-            pptSlide.addText(slide.content, {
-              x: 0.5,
-              y: 1.5,
-              w: '90%',
-              fontSize: 16,
-              color: '4a4a4a'
-            });
-          }
         }
-        
-        // Add slide number
-        pptSlide.addText(`Slide ${slide.id}`, {
-          x: 0.5,
-          y: 6.5,
-          w: 2,
-          fontSize: 10,
-          color: '9e9e9e'
-        });
       }
       
       // Apply accent color from CSS if available
