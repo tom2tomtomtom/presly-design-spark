@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
@@ -30,6 +29,7 @@ const Index = () => {
       const reader = new FileReader();
       reader.onload = (e) => {
         if (e.target && typeof e.target.result === 'string') {
+          console.log("CSS template loaded, length:", e.target.result.length);
           setCssTemplate(e.target.result);
         }
       };

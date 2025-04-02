@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -18,28 +17,83 @@ const PresentationExport = ({ slides, cssTemplate }: PresentationExportProps) =>
   const [isGeneratingEnhanced, setIsGeneratingEnhanced] = useState(false);
   
   const generateBasicHtmlContent = () => {
-    // Generate HTML with custom CSS if a template was provided
     return `
 <!DOCTYPE html>
 <html>
 <head>
   <title>Exported Presentation</title>
   <style>
-    body { font-family: Arial, sans-serif; }
-    .slide { margin-bottom: 50px; padding: 20px; border: 1px solid #ddd; }
-    .slide-title { font-size: 24px; margin-bottom: 20px; }
-    ul { margin-top: 10px; }
-    ${cssTemplate ? cssTemplate : ''}
+    body { 
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f5f5f5;
+    }
+    .slide { 
+      margin: 40px auto;
+      padding: 40px;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      background-color: white;
+      max-width: 900px;
+      height: 600px;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+    .slide-title { 
+      font-size: 32px;
+      margin-bottom: 30px;
+      color: #3b82f6;
+    }
+    .slide-content {
+      flex: 1;
+    }
+    .slide-bullet-list {
+      list-style: none;
+      padding-left: 10px;
+    }
+    .slide-bullet-list li {
+      margin-bottom: 15px;
+      display: flex;
+      align-items: start;
+    }
+    .slide-bullet-list li:before {
+      content: "";
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      background-color: #3b82f6;
+      border-radius: 50%;
+      margin-right: 15px;
+      margin-top: 10px;
+    }
+    .slide-footer {
+      text-align: right;
+      font-size: 14px;
+      color: #6b7280;
+      margin-top: auto;
+      padding-top: 20px;
+    }
+    
+    ${cssTemplate || ''}
   </style>
 </head>
 <body>
-  ${slides.map(slide => `
-    <div class="slide">
+  ${slides.map((slide, index) => `
+    <div class="slide" id="slide-${index+1}">
       <h2 class="slide-title">${slide.title}</h2>
-      ${slide.type === "bullets" 
-        ? `<ul>${Array.isArray(slide.content) ? slide.content.map(item => `<li>${item}</li>`).join('') : ''}</ul>` 
-        : `<p>${slide.content}</p>`
-      }
+      <div class="slide-content">
+        ${slide.type === "bullets" 
+          ? `<ul class="slide-bullet-list">${Array.isArray(slide.content) ? slide.content.map(item => `<li>${item}</li>`).join('') : ''}</ul>` 
+          : slide.type === "title"
+            ? `<p style="text-align: center; font-size: 24px; margin-top: 80px;">${slide.content}</p>`
+            : `<p>${slide.content}</p>`
+        }
+      </div>
+      <div class="slide-footer">
+        HTML PPT Generator - Slide ${index+1}/${slides.length}
+      </div>
     </div>
   `).join('')}
 </body>
@@ -64,7 +118,6 @@ const PresentationExport = ({ slides, cssTemplate }: PresentationExportProps) =>
         type: slide.type
       }));
       
-      // Include CSS template if provided
       const cssPrompt = cssTemplate 
         ? `\nUse the following CSS as a basis for styling, but enhance it as needed:\n\`\`\`css\n${cssTemplate}\n\`\`\``
         : "";
@@ -105,7 +158,6 @@ Return ONLY the complete HTML code without any explanations or markdown. The HTM
       const data = await response.json();
       const enhancedHtml = data.content[0].text;
       
-      // Extract just the HTML if it's wrapped in code blocks
       const htmlMatch = enhancedHtml.match(/```html\s*([\s\S]*?)\s*```/) || 
                          enhancedHtml.match(/```\s*([\s\S]*?)\s*```/) ||
                          [null, enhancedHtml];
@@ -121,24 +173,24 @@ Return ONLY the complete HTML code without any explanations or markdown. The HTM
     }
   };
   
-  // Initialize HTML content when component mounts or slides/cssTemplate change
   useEffect(() => {
+    console.log("CSS Template loaded:", cssTemplate ? "Yes" : "No");
+    if (cssTemplate) {
+      console.log("CSS Template sample:", cssTemplate.substring(0, 100) + "...");
+    }
     setHtmlContent(generateBasicHtmlContent());
   }, [slides, cssTemplate]);
   
   const handleExportHTML = () => {
-    // Create a Blob from the HTML content
     const blob = new Blob([htmlContent], { type: "text/html" });
     const url = URL.createObjectURL(blob);
     
-    // Create an anchor element and trigger a download
     const a = document.createElement("a");
     a.href = url;
     a.download = "presentation.html";
     document.body.appendChild(a);
     a.click();
     
-    // Clean up
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     
@@ -146,10 +198,8 @@ Return ONLY the complete HTML code without any explanations or markdown. The HTM
   };
   
   const handleExportPPT = () => {
-    // In a real app, this would call a conversion service API
     setExportStatus("processing");
     
-    // Simulate API call delay
     setTimeout(() => {
       setExportStatus("completed");
       setExportLink("https://example.com/download/presentation.pptx");
@@ -279,6 +329,16 @@ Return ONLY the complete HTML code without any explanations or markdown. The HTM
               rows={10}
               value={htmlContent}
             />
+            
+            {cssTemplate && (
+              <div className="mt-4">
+                <h4 className="text-sm font-medium mb-2">CSS Template Applied</h4>
+                <div className="p-3 bg-gray-100 rounded-md text-xs font-mono overflow-auto max-h-32">
+                  {cssTemplate.substring(0, 300)}
+                  {cssTemplate.length > 300 ? '...' : ''}
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

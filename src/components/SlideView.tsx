@@ -7,11 +7,18 @@ interface SlideViewProps {
     content: string | string[];
     type: string;
   };
+  cssTemplate?: string | null;
 }
 
-const SlideView = ({ slide }: SlideViewProps) => {
+const SlideView = ({ slide, cssTemplate }: SlideViewProps) => {
+  // Create a style element to apply the custom CSS if provided
+  const customStyle = cssTemplate ? (
+    <style dangerouslySetInnerHTML={{ __html: cssTemplate }} />
+  ) : null;
+
   return (
-    <div className="slide bg-white rounded-lg shadow-lg p-8 max-w-4xl mx-auto aspect-video flex flex-col">
+    <div className="slide bg-white rounded-lg shadow-lg p-8 max-w-4xl mx-auto aspect-video flex flex-col relative">
+      {customStyle}
       <h2 className="slide-title text-3xl font-bold mb-6 text-primary">{slide.title}</h2>
       
       <div className="slide-content flex-1">

@@ -1,4 +1,3 @@
-
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -137,7 +136,7 @@ const PresentationEditor = ({
   if (presentationMode) {
     return (
       <div className="presentation-mode">
-        <SlideView slide={currentSlide} />
+        <SlideView slide={currentSlide} cssTemplate={cssTemplate} />
         
         <div className="presentation-controls">
           <Button 
@@ -306,7 +305,7 @@ const PresentationEditor = ({
             </Card>
           ) : (
             <div className="space-y-4">
-              <SlideView slide={currentSlide} />
+              <SlideView slide={currentSlide} cssTemplate={cssTemplate} />
               
               <div className="flex justify-between">
                 <div className="flex space-x-2">
