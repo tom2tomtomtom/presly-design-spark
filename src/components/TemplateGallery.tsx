@@ -143,25 +143,28 @@ const TemplateGallery: React.FC<TemplateGalleryProps> = ({ onSelectTemplate }) =
                                 template.id === 'minimal' ? '#FFFFFF' : '#f5f5f5' 
               }}
             >
-              {template.preview ? (
-                <img 
-                  src={template.preview} 
-                  alt={template.name} 
-                  className="w-full h-full object-cover"
-                />
-              ) : (
+              {/* Always use styled div instead of images to avoid 404 errors */}
+              <div 
+                className="w-full h-full flex flex-col items-center justify-center p-4"
+                style={{ 
+                  color: template.id === 'corporate' ? '#0055A4' : 
+                        template.id === 'creative' ? '#FF5757' : 
+                        template.id === 'minimal' ? '#333333' : '#333333'
+                }}
+              >
+                <h3 className="text-xl font-bold mb-2">{template.name}</h3>
+                <p className="text-sm text-center">Sample Slide Title</p>
+                
+                {/* Add color indicator */}
                 <div 
-                  className="w-full h-full flex flex-col items-center justify-center p-4"
+                  className="w-16 h-4 mt-2 rounded-sm"
                   style={{ 
-                    color: template.id === 'corporate' ? '#0055A4' : 
-                          template.id === 'creative' ? '#FF5757' : 
-                          template.id === 'minimal' ? '#333333' : '#333333'
+                    backgroundColor: template.id === 'corporate' ? '#0055A4' : 
+                                    template.id === 'creative' ? '#FF5757' : 
+                                    template.id === 'minimal' ? '#666666' : '#333333'
                   }}
-                >
-                  <h3 className="text-xl font-bold mb-2">{template.name}</h3>
-                  <p className="text-sm text-center">Sample Slide Title</p>
-                </div>
-              )}
+                ></div>
+              </div>}
             </div>
             <CardContent className="p-4">
               <h3 className="font-medium">{template.name}</h3>

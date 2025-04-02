@@ -574,7 +574,7 @@ const PresentationExport = ({ slides, cssTemplate }: PresentationExportProps) =>
         });
       }
       
-      // Apply a theme if available
+      // Apply colors from the theme if available
       if (cssTemplate) {
         try {
           // Extract colors from CSS if possible
@@ -582,17 +582,27 @@ const PresentationExport = ({ slides, cssTemplate }: PresentationExportProps) =>
           if (accentColorMatch && accentColorMatch[1]) {
             const accentColor = accentColorMatch[1].trim();
             
-            // Apply as theme colors if it's a hex color
+            // Apply as custom color
             if (accentColor.startsWith('#')) {
-              pres.defineTheme({
-                name: 'customTheme',
-                headFontFace: 'Arial',
-                bodyFontFace: 'Arial',
-                colorScheme: 'custom',
-                title: { color: accentColor },
-                background: { color: '#FFFFFF' }
+              // Set the master slide background and colors
+              pres.defineSlideMaster({
+                title: 'MASTER_SLIDE',
+                background: { color: '#FFFFFF' },
+                objects: [
+                  { 'placeholder': {'options': { name: 'title', type: 'title', x: 0.5, y: 0.5, w: '90%', h: 1 }} },
+                  { 'placeholder': {'options': { name: 'body', type: 'body', x: 0.5, y: 1.5, w: '90%', h: 4 }} }
+                ]
               });
-              pres.applyTheme('customTheme');
+              
+              // Apply the color to all text elements as needed
+              pptSlide.addText(slide.title, { 
+                x: 0.5, 
+                y: 0.5, 
+                w: '90%', 
+                fontSize: 24,
+                bold: true,
+                color: accentColor.replace('#', '')  // Remove # for pptxgenjs
+              });
             }
           }
         } catch (error) {
