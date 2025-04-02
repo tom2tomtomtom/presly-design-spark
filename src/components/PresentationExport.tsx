@@ -626,7 +626,19 @@ const PresentationExport = ({ slides, cssTemplate }: PresentationExportProps) =>
           const bulletItems = bulletList ? bulletList.querySelectorAll('li') : [];
           
           const slideTitle = titleElement ? titleElement.textContent || `Slide ${index + 1}` : `Slide ${index + 1}`;
-          console.log(`Processing HTML slide ${index + 1}: "${slideTitle}" with ${bulletItems.length} bullet points`);
+          console.log(`Processing HTML slide: ${slideTitle}`);
+          
+          // Log details about the content we found
+          if (contentElement) {
+            const contentSample = contentElement.textContent?.substring(0, 50);
+            console.log(`Slide content sample: ${contentSample}...`);
+            if (bulletList) {
+              console.log(`Found bullet list with ${bulletItems.length} items`);
+            } else {
+              const paragraphs = contentElement.querySelectorAll('p');
+              console.log(`Found ${paragraphs.length} paragraphs`);
+            }
+          }
           
           // Create slide with a specific layout
           const pptSlide = pres.addSlide({ masterName: 'MASTER_SLIDE' });
@@ -659,15 +671,17 @@ const PresentationExport = ({ slides, cssTemplate }: PresentationExportProps) =>
                 }
               });
               
-              // Add all bullet points as a single text object with bullet formatting
+              // Add bullet points one by one to ensure compatibility
               if (bulletPoints.length > 0) {
-                pptSlide.addText(bulletPoints, {
-                  x: 0.5,
-                  y: 1.5,
-                  w: '90%',
-                  bullet: { type: 'bullet' },
-                  fontSize: 16,
-                  color: '4a4a4a'
+                bulletPoints.forEach((bulletText, bulletIndex) => {
+                  pptSlide.addText(bulletText, {
+                    x: 0.5,
+                    y: 1.5 + (bulletIndex * 0.4),
+                    w: '90%',
+                    bullet: true,
+                    fontSize: 16,
+                    color: '4a4a4a'
+                  });
                 });
               }
             } else {
@@ -685,15 +699,26 @@ const PresentationExport = ({ slides, cssTemplate }: PresentationExportProps) =>
                 });
                 
                 if (paragraphTexts.length > 0) {
-                  // Add paragraphs with line breaks between them
-                  pptSlide.addText(paragraphTexts, {
-                    x: 0.5,
-                    y: 1.5,
-                    w: '90%',
-                    fontSize: 16,
-                    color: '4a4a4a',
-                    breakLine: true
-                  });
+                  // If there's only one paragraph, add it as a string
+                  // Otherwise, add an array of paragraphs
+                  if (paragraphTexts.length === 1) {
+                    pptSlide.addText(paragraphTexts[0], {
+                      x: 0.5,
+                      y: 1.5,
+                      w: '90%',
+                      fontSize: 16,
+                      color: '4a4a4a'
+                    });
+                  } else {
+                    // Join paragraphs with newlines instead of using array
+                    pptSlide.addText(paragraphTexts.join('\n\n'), {
+                      x: 0.5,
+                      y: 1.5,
+                      w: '90%',
+                      fontSize: 16,
+                      color: '4a4a4a'
+                    });
+                  }
                 }
               } else {
                 const contentText = contentElement.textContent?.trim();
@@ -746,15 +771,17 @@ const PresentationExport = ({ slides, cssTemplate }: PresentationExportProps) =>
             // Filter out empty items
             const bulletPoints = slide.content.filter(item => item && item.trim());
             
-            // For bullet points - add as a single text object with bullet formatting
+            // For bullet points - add each bullet point individually
             if (bulletPoints.length > 0) {
-              pptSlide.addText(bulletPoints, {
-                x: 0.5,
-                y: 1.5,
-                w: '90%',
-                bullet: { type: 'bullet' },
-                fontSize: 16,
-                color: '4a4a4a'
+              bulletPoints.forEach((bulletText, bulletIndex) => {
+                pptSlide.addText(bulletText, {
+                  x: 0.5,
+                  y: 1.5 + (bulletIndex * 0.4),
+                  w: '90%',
+                  bullet: true,
+                  fontSize: 16,
+                  color: '4a4a4a'
+                });
               });
             }
           } else if (slide.type === 'title') {
@@ -810,7 +837,55 @@ const PresentationExport = ({ slides, cssTemplate }: PresentationExportProps) =>
       toast.success("HTML PowerPoint presentation exported successfully");
     } catch (error) {
       console.error("Error in PowerPoint export:", error);
-      handleError(error, ErrorType.EXPORT, "Failed to export PowerPoint", {
+      
+      // Try to provide more specific error information based on error type
+      let errorMessage = "Failed to export PowerPoint";
+      if (error instanceof TypeError && error.message.includes("Cannot create property")) {
+        errorMessage = "Text formatting error in PowerPoint export - trying simpler format";
+        
+        // Attempt to recover with a simpler export
+        try {
+          // Create a simpler version with basic formatting
+          const pres = new pptxgen();
+          pres.layout = 'LAYOUT_16x9';
+          
+          slides.forEach((slide, index) => {
+            const pptSlide = pres.addSlide();
+            
+            // Add title - simple format
+            pptSlide.addText(slide.title, { 
+              x: 0.5, y: 0.5, w: '90%', 
+              fontSize: 24, bold: true 
+            });
+            
+            // Add content based on slide type
+            if (slide.type === 'bullets' && Array.isArray(slide.content)) {
+              const bulletPoints = slide.content.filter(item => item && item.trim());
+              bulletPoints.forEach((text, idx) => {
+                pptSlide.addText(text, {
+                  x: 0.5, y: 1.5 + (idx * 0.4), w: '90%',
+                  bullet: true, fontSize: 16
+                });
+              });
+            } else if (typeof slide.content === 'string') {
+              pptSlide.addText(slide.content, {
+                x: 0.5, y: 1.5, w: '90%', fontSize: 16
+              });
+            }
+          });
+          
+          // Save with fallback name
+          await pres.writeFile({ fileName: 'presentation-simple.pptx' });
+          toast.success("Simple PowerPoint version created as fallback");
+          setExportStatus("completed");
+          return;
+        } catch (fallbackError) {
+          console.error("Fallback export also failed:", fallbackError);
+          errorMessage = "PowerPoint export failed - please try again with simpler content";
+        }
+      }
+      
+      handleError(error, ErrorType.EXPORT, errorMessage, {
         retry: () => exportWithPptxGenJs()
       });
       setExportStatus("idle");
