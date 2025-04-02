@@ -192,7 +192,6 @@ const FileUploadStep = ({
         };
         reader.readAsText(file);
       }
-      }
     }
   };
   
