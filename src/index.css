@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -12,18 +13,18 @@
 
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
-
-    --primary: 222.2 47.4% 11.2%;
+    
+    --primary: 217 91% 60%;
     --primary-foreground: 210 40% 98%;
 
     --secondary: 210 40% 96.1%;
     --secondary-foreground: 222.2 47.4% 11.2%;
 
+    --accent: 173 80% 32%;
+    --accent-foreground: 210 40% 98%;
+
     --muted: 210 40% 96.1%;
     --muted-foreground: 215.4 16.3% 46.9%;
-
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
@@ -35,19 +36,12 @@
     --radius: 0.5rem;
 
     --sidebar-background: 0 0% 98%;
-
     --sidebar-foreground: 240 5.3% 26.1%;
-
     --sidebar-primary: 240 5.9% 10%;
-
     --sidebar-primary-foreground: 0 0% 98%;
-
     --sidebar-accent: 240 4.8% 95.9%;
-
     --sidebar-accent-foreground: 240 5.9% 10%;
-
     --sidebar-border: 220 13% 91%;
-
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
 
@@ -61,8 +55,8 @@
     --popover: 222.2 84% 4.9%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
+    --primary: 217 91% 60%;
+    --primary-foreground: 210 40% 98%;
 
     --secondary: 217.2 32.6% 17.5%;
     --secondary-foreground: 210 40% 98%;
@@ -70,7 +64,7 @@
     --muted: 217.2 32.6% 17.5%;
     --muted-foreground: 215 20.2% 65.1%;
 
-    --accent: 217.2 32.6% 17.5%;
+    --accent: 173 80% 40%;
     --accent-foreground: 210 40% 98%;
 
     --destructive: 0 62.8% 30.6%;
@@ -98,4 +92,52 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+.slide {
+  @apply bg-white border border-gray-200 rounded-md shadow-md p-8 min-h-[400px] max-w-3xl mx-auto mb-8;
+}
+
+.slide-title {
+  @apply text-2xl font-bold mb-4 text-gray-800;
+}
+
+.slide-content {
+  @apply text-base text-gray-700;
+}
+
+.slide-bullet-list {
+  @apply list-disc pl-6 space-y-2;
+}
+
+.presentation-mode {
+  @apply fixed inset-0 bg-black flex items-center justify-center;
+}
+
+.presentation-mode .slide {
+  @apply w-full h-full max-w-4xl max-h-[80vh] flex flex-col justify-center shadow-2xl m-0;
+}
+
+.presentation-controls {
+  @apply fixed bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-4 bg-gray-800 bg-opacity-75 text-white p-2 rounded-md;
+}
+
+.template-preview {
+  @apply border-2 rounded-md p-2 cursor-pointer transition-all duration-200;
+}
+
+.template-preview.selected {
+  @apply border-primary;
+}
+
+.step-active {
+  @apply bg-primary text-white;
+}
+
+.step-completed {
+  @apply bg-accent text-white;
+}
+
+.step-pending {
+  @apply bg-gray-200 text-gray-700;
 }
