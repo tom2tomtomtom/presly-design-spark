@@ -12,8 +12,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Download, Copy, Wand, FileText, FileType, FileImage } from "lucide-react";
-// Import JSZip and PptxGenJS directly instead of using html-to-pptx
+// Import both libraries to support different export approaches
 import pptxgen from 'pptxgenjs';
+import HtmlToPptx from 'html-to-pptx';
 import { handleError, ErrorType } from "@/lib/error";
 
 interface PresentationExportProps {
@@ -511,6 +512,140 @@ const PresentationExport = ({ slides, cssTemplate }: PresentationExportProps) =>
     setExportStatus("processing");
     
     try {
+      // For proper HTML-to-PPTX conversion, we need to create a temporary HTML document
+      // with our slide content in a format that html-to-pptx can process
+      
+      // Step 1: Create a temporary container div to hold our slides
+      const tempContainer = document.createElement('div');
+      tempContainer.innerHTML = htmlContent;
+      
+      // Step 2: Format the HTML for html-to-pptx library
+      // This library expects each slide to have a special class and structure
+      
+      // Extract slides from our HTML content
+      const slideElements = tempContainer.querySelectorAll('.slide');
+      console.log(`Found ${slideElements.length} slides in HTML for PowerPoint export`);
+      
+      if (slideElements.length === 0) {
+        // If no slides found in HTML, use fallback method
+        console.log("No slides found in HTML, using PptxGenJS directly");
+        exportWithPptxGenJs();
+        return;
+      }
+      
+      // Create formatted HTML for the html-to-pptx library
+      const formattedHtml = document.createElement('div');
+      formattedHtml.id = 'pptx-container';
+      
+      // Process each slide and format it for html-to-pptx
+      slideElements.forEach((slideElement, index) => {
+        const slideDiv = document.createElement('div');
+        slideDiv.className = 'pptx-slide';
+        slideDiv.setAttribute('data-slide-index', String(index + 1));
+        
+        // Get title
+        const titleElement = slideElement.querySelector('.slide-title');
+        if (titleElement) {
+          const h1 = document.createElement('h1');
+          h1.textContent = titleElement.textContent || `Slide ${index + 1}`;
+          h1.setAttribute('data-type', 'text');
+          h1.style.color = getComputedStyle(titleElement).color;
+          h1.style.fontSize = '24px';
+          h1.style.fontWeight = 'bold';
+          slideDiv.appendChild(h1);
+        }
+        
+        // Process content based on slide type
+        const contentElement = slideElement.querySelector('.slide-content');
+        if (contentElement) {
+          // Check for bullet lists
+          const bulletList = contentElement.querySelector('.slide-bullet-list');
+          if (bulletList) {
+            const ul = document.createElement('ul');
+            ul.setAttribute('data-type', 'text');
+            ul.style.margin = '20px 0';
+            
+            const bullets = bulletList.querySelectorAll('li');
+            bullets.forEach(bullet => {
+              const li = document.createElement('li');
+              li.textContent = bullet.textContent || '';
+              li.style.marginBottom = '10px';
+              ul.appendChild(li);
+            });
+            
+            slideDiv.appendChild(ul);
+          } else {
+            // Handle regular text content
+            const contentText = contentElement.textContent || '';
+            if (contentText.trim()) {
+              const p = document.createElement('p');
+              p.setAttribute('data-type', 'text');
+              p.textContent = contentText;
+              p.style.fontSize = '16px';
+              p.style.margin = '20px 0';
+              slideDiv.appendChild(p);
+            }
+          }
+        }
+        
+        // Add a horizontal rule to separate slides
+        const hr = document.createElement('hr');
+        slideDiv.appendChild(hr);
+        
+        formattedHtml.appendChild(slideDiv);
+      });
+      
+      // Temporary append to document to compute styles (optional)
+      document.body.appendChild(formattedHtml);
+      
+      // Step 3: Create a new instance of html-to-pptx with the formatted HTML
+      try {
+        const pptx = new HtmlToPptx({
+          fileName: 'presentation',
+          pageClassName: 'pptx-slide',
+          slideMarginTop: 35,
+          slideMarginBottom: 35,
+          slideMarginLeft: 35,
+          slideMarginRight: 35,
+          css: cssTemplate || undefined
+        });
+        
+        // Extract accent color if available
+        let accentColor = '';
+        if (cssTemplate) {
+          const accentColorMatch = cssTemplate.match(/--accent-color:\s*([^;]*)/);
+          if (accentColorMatch && accentColorMatch[1]) {
+            accentColor = accentColorMatch[1].trim();
+          }
+        }
+        
+        // Generate the PowerPoint file
+        await pptx.exportPresentation();
+        setExportStatus("completed");
+        toast.success("PowerPoint presentation exported successfully");
+        
+      } catch (htmlToPptxError) {
+        console.error("Error using html-to-pptx:", htmlToPptxError);
+        console.log("Falling back to direct PptxGenJS method");
+        // If html-to-pptx fails, fall back to the direct method
+        exportWithPptxGenJs();
+      } finally {
+        // Clean up the temporary HTML element
+        if (document.body.contains(formattedHtml)) {
+          document.body.removeChild(formattedHtml);
+        }
+      }
+    } catch (error) {
+      handleError(error, ErrorType.EXPORT, "Error generating PowerPoint", {
+        retry: () => handleExportPPT()
+      });
+      setExportStatus("idle");
+    }
+  };
+
+  // Fallback method using PptxGenJS directly
+  const exportWithPptxGenJs = async () => {
+    try {
       // Create a new instance of PptxGenJS
       const pres = new pptxgen();
       
@@ -518,8 +653,6 @@ const PresentationExport = ({ slides, cssTemplate }: PresentationExportProps) =>
       const parser = new DOMParser();
       const htmlDoc = parser.parseFromString(htmlContent, 'text/html');
       const slideElements = htmlDoc.querySelectorAll('.slide');
-      
-      console.log(`Found ${slideElements.length} slides in HTML for PowerPoint export`);
       
       // Check if we have slides in the HTML
       if (slideElements.length > 0) {
@@ -565,7 +698,6 @@ const PresentationExport = ({ slides, cssTemplate }: PresentationExportProps) =>
             const paragraphs = contentElement ? contentElement.querySelectorAll('p') : [];
             
             if (paragraphs.length > 0) {
-              // If we have paragraphs, add them individually
               paragraphs.forEach((paragraph, paragraphIndex) => {
                 const paragraphText = paragraph.textContent || '';
                 if (paragraphText.trim()) {
@@ -579,7 +711,6 @@ const PresentationExport = ({ slides, cssTemplate }: PresentationExportProps) =>
                 }
               });
             } else if (contentElement) {
-              // Just add the content text
               const contentText = contentElement.textContent || '';
               if (contentText.trim()) {
                 pptSlide.addText(contentText, {
@@ -603,15 +734,12 @@ const PresentationExport = ({ slides, cssTemplate }: PresentationExportProps) =>
           });
         });
       } else {
-        // Fallback to using slides data if HTML parsing fails
+        // Fallback to using slides data
         console.log("Fallback to slides data for PowerPoint export");
         
-        // Process slides from the slide data
         for (const slide of slides) {
-          // Add a new slide
           const pptSlide = pres.addSlide();
           
-          // Set slide title
           pptSlide.addText(slide.title, { 
             x: 0.5, 
             y: 0.5, 
@@ -621,9 +749,7 @@ const PresentationExport = ({ slides, cssTemplate }: PresentationExportProps) =>
             color: '363636'
           });
           
-          // Add content based on slide type
           if (slide.type === 'bullets' && Array.isArray(slide.content)) {
-            // For bullet points
             slide.content.forEach((item, index) => {
               pptSlide.addText(item, {
                 x: 0.5,
@@ -635,7 +761,6 @@ const PresentationExport = ({ slides, cssTemplate }: PresentationExportProps) =>
               });
             });
           } else if (slide.type === 'title') {
-            // For title slides
             pptSlide.addText(typeof slide.content === 'string' ? slide.content : '', {
               x: 0.5,
               y: 3,
@@ -646,7 +771,6 @@ const PresentationExport = ({ slides, cssTemplate }: PresentationExportProps) =>
               color: '4a4a4a'
             });
           } else {
-            // For text slides
             pptSlide.addText(typeof slide.content === 'string' ? slide.content : '', {
               x: 0.5,
               y: 1.5,
@@ -656,7 +780,6 @@ const PresentationExport = ({ slides, cssTemplate }: PresentationExportProps) =>
             });
           }
           
-          // Add slide number
           pptSlide.addText(`Slide ${slide.id}`, {
             x: 0.5,
             y: 6.5,
@@ -670,22 +793,16 @@ const PresentationExport = ({ slides, cssTemplate }: PresentationExportProps) =>
       // Apply colors from the theme if available
       if (cssTemplate) {
         try {
-          // Extract colors from CSS if possible
           const accentColorMatch = cssTemplate.match(/--accent-color:\s*([^;]*)/);
           if (accentColorMatch && accentColorMatch[1]) {
             const accentColor = accentColorMatch[1].trim();
             
-            // Apply as custom color if it's a hex color
             if (accentColor.startsWith('#')) {
               const colorValue = accentColor.replace('#', '');
-              // Apply color to master slide
+              // Set slide master properties
               pres.defineSlideMaster({
                 title: 'MASTER_SLIDE',
-                background: { color: 'FFFFFF' },
-                objects: [
-                  { 'placeholder': { 'options': { name: 'title', type: 'title', x: 0.5, y: 0.5, w: '90%', h: 1, color: colorValue } } },
-                  { 'placeholder': { 'options': { name: 'body', type: 'body', x: 0.5, y: 1.5, w: '90%', h: 4 } } }
-                ]
+                background: { color: 'FFFFFF' }
               });
             }
           }
@@ -695,20 +812,12 @@ const PresentationExport = ({ slides, cssTemplate }: PresentationExportProps) =>
       }
       
       // Save the presentation
-      pres.writeFile({ fileName: 'presentation.pptx' })
-        .then(() => {
-          setExportStatus("completed");
-          toast.success("PowerPoint presentation exported successfully");
-        })
-        .catch((error) => {
-          handleError(error, ErrorType.EXPORT, "Failed to save PowerPoint file", {
-            retry: () => handleExportPPT()
-          });
-          setExportStatus("idle");
-        });
+      await pres.writeFile({ fileName: 'presentation.pptx' });
+      setExportStatus("completed");
+      toast.success("PowerPoint presentation exported successfully");
     } catch (error) {
-      handleError(error, ErrorType.EXPORT, "Error generating PowerPoint", {
-        retry: () => handleExportPPT()
+      handleError(error, ErrorType.EXPORT, "Failed to export PowerPoint with fallback method", {
+        retry: () => exportWithPptxGenJs()
       });
       setExportStatus("idle");
     }
