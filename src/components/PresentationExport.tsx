@@ -1,11 +1,10 @@
-
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Download, Copy, Wand, FileText } from "lucide-react";
-import HTMLToPPTX from "html-to-pptx";
+import htmlToPptx from "html-to-pptx";
 
 interface PresentationExportProps {
   slides: any[];
@@ -239,24 +238,24 @@ Return ONLY the complete HTML code without any explanations or markdown. The HTM
       // Get all slide elements
       const slideElements = tempDiv.querySelectorAll('.slide');
       
-      // Create HTML to PPTX converter instance
-      const pptx = new HTMLToPPTX();
-      
-      // Create slides
-      await Promise.all(Array.from(slideElements).map(async (slide, index) => {
-        // Get title and content from the slide
-        const title = slide.querySelector('.slide-title')?.textContent || '';
-        
-        // Add the slide to the presentation
-        await pptx.addSlide(slide as HTMLElement, {
+      // Create slides array for the PPTX generation
+      const slidesData = Array.from(slideElements).map((slide, index) => {
+        return {
+          html: slide.outerHTML,
           filename: `slide-${index + 1}`,
-          widthInches: 10,
-          heightInches: 5.625, // 16:9 aspect ratio
-        });
-      }));
+          width: 10,
+          height: 5.625 // 16:9 aspect ratio
+        };
+      });
       
-      // Generate and download the PPTX file
-      const pptBlob = await pptx.toBlob();
+      // Generate the PPTX file
+      const pptxBuffer = await htmlToPptx(slidesData);
+      
+      // Convert buffer to Blob
+      const pptBlob = new Blob([pptxBuffer], { 
+        type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation' 
+      });
+      
       const url = URL.createObjectURL(pptBlob);
       
       const a = document.createElement("a");
