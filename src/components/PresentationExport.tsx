@@ -11,10 +11,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Download, Copy, Wand, FileText, FileType, FileImage } from "lucide-react";
-// Import both libraries to support different export approaches
+import { Download, Copy, Wand, FileText, FileType, FileImage, Camera } from "lucide-react";
+// Import libraries for PowerPoint generation
 import pptxgen from 'pptxgenjs';
 import HtmlToPptx from 'html-to-pptx';
+import html2canvas from 'html2canvas';
 import { handleError, ErrorType } from "@/lib/error";
 
 // Helper function to convert RGB to Hex for PowerPoint colors
@@ -34,7 +35,9 @@ const PresentationExport = ({ slides, cssTemplate }: PresentationExportProps) =>
   const [exportStatus, setExportStatus] = useState<"idle" | "processing" | "completed">("idle");
   const [htmlContent, setHtmlContent] = useState<string>("");
   const [isGeneratingEnhanced, setIsGeneratingEnhanced] = useState(false);
+  const [isExportingVisual, setIsExportingVisual] = useState(false);
   const presentationRef = useRef<HTMLDivElement>(null);
+  const slidesContainerRef = useRef<HTMLDivElement>(null);
   
   const generateBasicHtmlContent = () => {
     console.log("Generating HTML with CSS:", cssTemplate ? "Yes (length: " + cssTemplate.length + ")" : "No");
@@ -634,24 +637,11 @@ const PresentationExport = ({ slides, cssTemplate }: PresentationExportProps) =>
       const textColorHex = textColor.replace('#', '');
       
       // Create multiple slide masters for different slide types
-      // First, the base master slide
+      // First, the base master slide - removing decorative shapes to avoid unwanted elements
       pres.defineSlideMaster({
         title: 'MASTER_SLIDE',
         background: { color: bgColorHex },
         objects: [
-          // Add decorative shapes to match the template aesthetic
-          { 'rect': { 
-            'x': '85%', 'y': '15%', 'w': 1, 'h': 1,
-            'fill': { 'color': accentColorHex, 'transparency': 80 }, // 20% opacity (80% transparent)
-            'shadow': { 'type': 'outer', 'blur': 3, 'offset': 2, 'angle': 45, 'color': '000000', 'opacity': 0.15 },
-            'rotate': 45
-          }},
-          { 'ellipse': { 
-            'x': '10%', 'y': '85%', 'w': 0.5, 'h': 0.5,
-            'fill': { 'color': secondaryColor.replace('#', ''), 'transparency': 80 }, // 20% opacity
-            'line': { 'color': secondaryColor.replace('#', '') },
-            'lineSize': 1
-          }},
           // Title placeholder
           { 'placeholder': { 
             'options': { 
@@ -669,40 +659,15 @@ const PresentationExport = ({ slides, cssTemplate }: PresentationExportProps) =>
         slideNumber: { x: 0.5, y: '90%', color: textColorHex }
       });
       
-      // Title slide master with centered title and subtitle
+      // Title slide master with centered title and subtitle - removing decorative shapes
       pres.defineSlideMaster({
         title: 'TITLE_SLIDE',
         background: { color: bgColorHex },
         objects: [
-          // Background elements to match the template aesthetic
+          // Simple background
           { 'rect': { 
             'x': 0, 'y': 0, 'w': '100%', 'h': '100%',
             'fill': { 'color': bgColorHex }
-          }},
-          
-          // Add decorative shapes similar to those in the template
-          { 'ellipse': { 
-            'x': '80%', 'y': '15%', 'w': 2.5, 'h': 2.5,
-            'fill': { 'color': accentColorHex, 'transparency': 87 }, // 13% opacity (87% transparent)
-            'line': { 'color': accentColorHex, 'width': 1 }
-          }},
-          { 'triangle': { 
-            'x': '10%', 'y': '75%', 'w': 3, 'h': 3,
-            'fill': { 'color': secondaryColor.replace('#', ''), 'transparency': 87 }, // 13% opacity
-            'line': { 'color': secondaryColor.replace('#', ''), 'width': 1 },
-            'rotate': 15
-          }},
-          { 'rect': { 
-            'x': '75%', 'y': '65%', 'w': 2, 'h': 2,
-            'fill': { 'color': accentColorHex, 'transparency': 87 }, // 13% opacity
-            'line': { 'color': accentColorHex },
-            'rotate': 45
-          }},
-          
-          // Gradient overlay
-          { 'rect': { 
-            'x': 0, 'y': 0, 'w': '100%', 'h': '100%',
-            'fill': { 'type': 'gradient', 'color': 'ffffff', 'transparency': 90 }
           }},
           
           // Title and subtitle placeholders
@@ -745,25 +710,14 @@ const PresentationExport = ({ slides, cssTemplate }: PresentationExportProps) =>
         ]
       });
       
-      // Two-column slide master
+      // Two-column slide master - removing decorative shapes
       pres.defineSlideMaster({
         title: 'TWO_COLUMN_SLIDE',
         background: { color: bgColorHex },
         objects: [
-          // Add decorative shapes similar to those in the template
+          // Simple header bar for visual structure
           { 'rect': { 
-            'x': '90%', 'y': '10%', 'w': 0.8, 'h': 0.8,
-            'fill': { 'color': accentColorHex, 'transparency': 80 }, // 20% opacity
-            'rotate': 45
-          }},
-          { 'ellipse': { 
-            'x': '5%', 'y': '80%', 'w': 0.6, 'h': 0.6,
-            'fill': { 'color': secondaryColor.replace('#', ''), 'transparency': 80 } // 20% opacity
-          }},
-          
-          // Add a custom header bar
-          { 'rect': { 
-            'x': 0, 'y': 0, 'w': '100%', 'h': 0.25,
+            'x': 0, 'y': 0, 'w': '100%', 'h': 0.1,
             'fill': { 'color': accentColorHex, 'transparency': 80 } // 20% opacity
           }},
           
@@ -1385,6 +1339,145 @@ const PresentationExport = ({ slides, cssTemplate }: PresentationExportProps) =>
     }
   };
   
+  /**
+   * Visual PowerPoint export using html2canvas to capture slides as images
+   * This preserves the exact visual appearance of the HTML slides
+   */
+  const handleVisualExport = async () => {
+    if (!slidesContainerRef.current) {
+      toast.error("Slides container not found");
+      return;
+    }
+
+    try {
+      setIsExportingVisual(true);
+      setExportStatus("processing");
+      
+      toast.info("Starting visual PowerPoint export...");
+      
+      // Find all slide elements
+      const slideElements = slidesContainerRef.current.querySelectorAll('.slide');
+      if (slideElements.length === 0) {
+        // If no .slide elements found, try to use the container itself
+        toast.info("No individual slides found. Capturing entire presentation...");
+        await captureAndExportSingle();
+      } else {
+        // Export each slide individually
+        await captureAndExportMultiple(slideElements);
+      }
+      
+      setExportStatus("completed");
+      setIsExportingVisual(false);
+    } catch (error) {
+      console.error("Error in visual PowerPoint export:", error);
+      handleError(error, ErrorType.EXPORT, "Failed to create visual PowerPoint", {
+        retry: () => handleVisualExport()
+      });
+      setExportStatus("idle");
+      setIsExportingVisual(false);
+    }
+  };
+  
+  // Capture entire container as a single slide
+  const captureAndExportSingle = async () => {
+    if (!slidesContainerRef.current) return;
+    
+    toast.info("Capturing presentation...");
+    
+    try {
+      // Capture the entire container
+      const canvas = await html2canvas(slidesContainerRef.current, {
+        scale: 2, // Higher resolution
+        useCORS: true, // Allow cross-origin images
+        logging: false,
+        backgroundColor: '#ffffff'
+      });
+      
+      // Create PowerPoint with a single slide
+      const pptx = new pptxgen();
+      pptx.layout = 'LAYOUT_16x9';
+      
+      // Convert canvas to image data
+      const imageData = canvas.toDataURL("image/png");
+      
+      // Create a slide with the image
+      const slide = pptx.addSlide();
+      slide.addImage({
+        data: imageData,
+        x: 0,
+        y: 0,
+        w: '100%',
+        h: '100%'
+      });
+      
+      toast.success("Creating PowerPoint file...");
+      await pptx.writeFile({ fileName: 'visual-presentation.pptx' });
+      toast.success("Visual PowerPoint exported successfully!");
+    } catch (error) {
+      console.error("Error capturing slide:", error);
+      throw error;
+    }
+  };
+  
+  // Capture multiple slides individually
+  const captureAndExportMultiple = async (slideElements: NodeListOf<Element>) => {
+    try {
+      // Create new PowerPoint
+      const pptx = new pptxgen();
+      pptx.layout = 'LAYOUT_16x9';
+      
+      // Process each slide
+      for (let i = 0; i < slideElements.length; i++) {
+        const slideElement = slideElements[i] as HTMLElement;
+        
+        // Make the slide visible if it's not already
+        const originalDisplay = slideElement.style.display;
+        const originalVisibility = slideElement.style.visibility;
+        const originalPosition = slideElement.style.position;
+        const originalZIndex = slideElement.style.zIndex;
+        
+        // Make sure the slide is visible for capture
+        slideElement.style.display = 'block';
+        slideElement.style.visibility = 'visible';
+        slideElement.style.position = 'relative';
+        slideElement.style.zIndex = '999';
+        
+        toast.info(`Capturing slide ${i + 1} of ${slideElements.length}...`);
+        
+        // Capture the slide
+        const canvas = await html2canvas(slideElement, {
+          scale: 2, // Higher resolution
+          useCORS: true, // Allow cross-origin images
+          logging: false,
+          backgroundColor: '#ffffff'
+        });
+        
+        // Create a new slide and add the image
+        const slide = pptx.addSlide();
+        slide.addImage({
+          data: canvas.toDataURL("image/png"),
+          x: 0,
+          y: 0,
+          w: '100%',
+          h: '100%'
+        });
+        
+        // Restore original styles
+        slideElement.style.display = originalDisplay;
+        slideElement.style.visibility = originalVisibility;
+        slideElement.style.position = originalPosition;
+        slideElement.style.zIndex = originalZIndex;
+      }
+      
+      toast.success("Creating PowerPoint file...");
+      await pptx.writeFile({ fileName: 'visual-presentation.pptx' });
+      toast.success("Visual PowerPoint exported successfully!");
+    } catch (error) {
+      console.error("Error capturing slides:", error);
+      throw error;
+    }
+  };
+
   // Simple PPTX export function that uses the direct approach from the example
   const exportSimplePptx = async () => {
     try {
@@ -1681,6 +1774,16 @@ const PresentationExport = ({ slides, cssTemplate }: PresentationExportProps) =>
                       <Download className="mr-2 h-4 w-4" />
                       Simple PowerPoint
                     </Button>
+                    
+                    <Button 
+                      onClick={handleVisualExport}
+                      disabled={isExportingVisual}
+                      variant="outline" 
+                      className="w-full"
+                    >
+                      <Camera className="mr-2 h-4 w-4" />
+                      {isExportingVisual ? "Capturing..." : "Visual PowerPoint"}
+                    </Button>
                   </div>
                 )}
               </div>
@@ -1733,8 +1836,18 @@ const PresentationExport = ({ slides, cssTemplate }: PresentationExportProps) =>
         </Card>
       </div>
       
-      {/* Hidden div for rendering HTML content for PowerPoint export */}
+      {/* Hidden divs for rendering HTML content for PowerPoint export */}
       <div ref={presentationRef} style={{ display: 'none' }}></div>
+      
+      {/* Container to render slides for visual capture */}
+      <div ref={slidesContainerRef} style={{ 
+        position: 'fixed', 
+        left: '-9999px', 
+        width: '1280px', // 16:9 aspect ratio
+        height: '720px',  
+        overflow: 'hidden'
+      }} 
+      dangerouslySetInnerHTML={{ __html: htmlContent }}></div>
     </div>
   );
 };
