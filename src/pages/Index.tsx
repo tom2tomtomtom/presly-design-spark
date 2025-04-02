@@ -1,11 +1,11 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import FileUploadStep from "@/components/FileUploadStep";
 import PresentationEditor from "@/components/PresentationEditor";
 import PresentationExport from "@/components/PresentationExport";
 import StepIndicator from "@/components/StepIndicator";
+import SettingsModal from "@/components/SettingsModal";
 
 const Index = () => {
   const [currentStep, setCurrentStep] = useState(1);
@@ -13,16 +13,22 @@ const Index = () => {
   const [templateFile, setTemplateFile] = useState<File | null>(null);
   const [slides, setSlides] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState("upload");
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   
-  // Process files and generate slides
+  useEffect(() => {
+    const apiKey = localStorage.getItem("anthropicApiKey");
+    
+    if (!apiKey) {
+      setIsSettingsModalOpen(true);
+    }
+  }, []);
+  
   const processFiles = () => {
     if (!docFile) {
       toast.error("Please upload a document file");
       return;
     }
     
-    // For the demo, we'll create some sample slides
-    // In a real app, this would parse the DOC file
     const sampleSlides = [
       {
         id: 1,
@@ -118,6 +124,11 @@ const Index = () => {
           {renderTabContent()}
         </TabsContent>
       </Tabs>
+      
+      <SettingsModal
+        isOpen={isSettingsModalOpen}
+        onClose={() => setIsSettingsModalOpen(false)}
+      />
     </div>
   );
 };

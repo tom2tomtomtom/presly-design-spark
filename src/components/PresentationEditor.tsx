@@ -1,4 +1,3 @@
-
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -14,10 +13,12 @@ import {
   Save, 
   Download, 
   Trash2,
-  MessageSquare
+  MessageSquare,
+  Settings
 } from "lucide-react";
 import SlideView from "@/components/SlideView";
 import AIFeedbackModal from "@/components/AIFeedbackModal";
+import SettingsModal from "@/components/SettingsModal";
 
 interface PresentationEditorProps {
   slides: any[];
@@ -34,6 +35,7 @@ const PresentationEditor = ({
   const [editMode, setEditMode] = useState(false);
   const [presentationMode, setPresentationMode] = useState(false);
   const [isAIModalOpen, setIsAIModalOpen] = useState(false);
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   
   const titleRef = useRef<HTMLInputElement>(null);
   const contentRef = useRef<HTMLTextAreaElement>(null);
@@ -110,33 +112,23 @@ const PresentationEditor = ({
     setPresentationMode(!presentationMode);
   };
   
-  const openAIFeedback = () => {
-    setIsAIModalOpen(true);
+  const openSettings = () => {
+    setIsSettingsModalOpen(true);
   };
   
-  const handleAIFeedback = (feedback: string, slideIndex: number) => {
-    // In a real app, this would send the feedback to an LLM API
-    // and process the response to update the slide
-    toast.success("AI feedback received! Processing...");
-    
-    // Simulate AI processing
-    setTimeout(() => {
-      const updatedSlides = [...slides];
-      const updatedSlide = { ...updatedSlides[slideIndex] };
+  const handleAIFeedback = (feedbackData: string) => {
+    try {
+      const updatedSlide = JSON.parse(feedbackData);
       
-      if (updatedSlide.type === "bullets") {
-        updatedSlide.content = [
-          ...updatedSlide.content,
-          "AI suggested bullet point"
-        ];
-      } else {
-        updatedSlide.content += " AI suggested enhancement to your content.";
+      if (updatedSlide.title && (updatedSlide.content || Array.isArray(updatedSlide.content))) {
+        const newSlides = [...slides];
+        newSlides[currentSlideIndex] = updatedSlide;
+        setSlides(newSlides);
+        toast.success("Slide updated with AI suggestions");
       }
-      
-      updatedSlides[slideIndex] = updatedSlide;
-      setSlides(updatedSlides);
-      toast.success("Slide updated with AI suggestions");
-    }, 1500);
+    } catch (e) {
+      toast.success("AI feedback received");
+    }
   };
   
   if (presentationMode) {
@@ -191,6 +183,14 @@ const PresentationEditor = ({
         </div>
         
         <div className="space-x-2">
+          <Button 
+            variant="outline" 
+            onClick={openSettings}
+          >
+            <Settings className="mr-2 h-4 w-4" />
+            Settings
+          </Button>
+          
           <Button 
             variant="outline" 
             onClick={togglePresentationMode}
@@ -332,7 +332,7 @@ const PresentationEditor = ({
                   <Button 
                     variant="outline" 
                     size="sm"
-                    onClick={openAIFeedback}
+                    onClick={() => setIsAIModalOpen(true)}
                   >
                     <MessageSquare className="h-4 w-4 mr-1" />
                     AI Feedback
@@ -355,12 +355,14 @@ const PresentationEditor = ({
       <AIFeedbackModal 
         isOpen={isAIModalOpen} 
         onClose={() => setIsAIModalOpen(false)}
-        onSubmit={(feedback) => {
-          handleAIFeedback(feedback, currentSlideIndex);
-          setIsAIModalOpen(false);
-        }}
+        onSubmit={handleAIFeedback}
         slide={currentSlide}
         slideIndex={currentSlideIndex}
+      />
+      
+      <SettingsModal
+        isOpen={isSettingsModalOpen}
+        onClose={() => setIsSettingsModalOpen(false)}
       />
     </div>
   );
