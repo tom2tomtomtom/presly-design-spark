@@ -15,20 +15,9 @@ import { Download, Copy, Wand, FileText, FileType, FileImage, Camera } from "luc
 // Import libraries for PowerPoint generation
 import pptxgen from 'pptxgenjs';
 import HtmlToPptx from 'html-to-pptx';
-// Import html2canvas dynamically to avoid build issues
+// Import html2canvas using our shim
+import html2canvas from "@/lib/html2canvas-shim"; 
 import { handleError, ErrorType } from "@/lib/error";
-
-// Define html2canvas type to avoid TypeScript errors
-let html2canvas: any = null;
-
-// Load html2canvas dynamically
-if (typeof window !== 'undefined') {
-  import('html2canvas').then(module => {
-    html2canvas = module.default;
-  }).catch(err => {
-    console.error('Error loading html2canvas:', err);
-  });
-}
 
 // Helper function to convert RGB to Hex for PowerPoint colors
 function rgbToHex(r: number, g: number, b: number): string {
@@ -1361,21 +1350,6 @@ const PresentationExport = ({ slides, cssTemplate }: PresentationExportProps) =>
       return;
     }
 
-    // Check if html2canvas is loaded
-    if (!html2canvas) {
-      toast.error("html2canvas is still loading. Please try again in a few seconds.");
-      
-      // Try to load it again
-      try {
-        const module = await import('html2canvas');
-        html2canvas = module.default;
-      } catch (err) {
-        console.error('Error loading html2canvas:', err);
-        toast.error("Could not load required library. Please refresh the page and try again.");
-        return;
-      }
-    }
-
     try {
       setIsExportingVisual(true);
       setExportStatus("processing");
@@ -1407,7 +1381,7 @@ const PresentationExport = ({ slides, cssTemplate }: PresentationExportProps) =>
   
   // Capture entire container as a single slide
   const captureAndExportSingle = async () => {
-    if (!slidesContainerRef.current || !html2canvas) return;
+    if (!slidesContainerRef.current) return;
     
     toast.info("Capturing presentation...");
     
@@ -1448,11 +1422,6 @@ const PresentationExport = ({ slides, cssTemplate }: PresentationExportProps) =>
   
   // Capture multiple slides individually
   const captureAndExportMultiple = async (slideElements: NodeListOf<Element>) => {
-    // Verify html2canvas is available
-    if (!html2canvas) {
-      toast.error("Required library not available");
-      return;
-    }
     
     try {
       // Create new PowerPoint

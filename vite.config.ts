@@ -20,16 +20,14 @@ export default defineConfig(({ mode }) => ({
     },
   },
   optimizeDeps: {
-    include: ['html2canvas']
+    include: ['html2canvas', 'pptxgenjs', 'html-to-pptx']
   },
   build: {
-    commonjsOptions: {
-      include: [/html2canvas/, /node_modules/],
-    },
     rollupOptions: {
+      external: ['html2canvas'],
       output: {
-        manualChunks: {
-          html2canvas: ['html2canvas'],
+        globals: {
+          'html2canvas': 'html2canvas'
         }
       }
     }
