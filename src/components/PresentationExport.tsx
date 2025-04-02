@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Download, Copy, Wand, FileText } from "lucide-react";
-import htmlToPptx from "html-to-pptx";
+import * as pptxgen from "html-to-pptx";
 
 interface PresentationExportProps {
   slides: any[];
@@ -249,7 +249,7 @@ Return ONLY the complete HTML code without any explanations or markdown. The HTM
       });
       
       // Generate the PPTX file
-      const pptxBuffer = await htmlToPptx(slidesData);
+      const pptxBuffer = await pptxgen.default(slidesData);
       
       // Convert buffer to Blob
       const pptBlob = new Blob([pptxBuffer], { 
