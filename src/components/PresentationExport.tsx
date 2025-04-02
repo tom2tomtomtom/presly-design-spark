@@ -17,12 +17,15 @@ const PresentationExport = ({ slides, cssTemplate }: PresentationExportProps) =>
   const [isGeneratingEnhanced, setIsGeneratingEnhanced] = useState(false);
   
   const generateBasicHtmlContent = () => {
+    console.log("Generating HTML with CSS:", cssTemplate ? "Yes (length: " + cssTemplate.length + ")" : "No");
+    
     return `
 <!DOCTYPE html>
 <html>
 <head>
   <title>Exported Presentation</title>
   <style>
+    /* Base styles */
     body { 
       font-family: Arial, sans-serif;
       margin: 0;
@@ -76,7 +79,8 @@ const PresentationExport = ({ slides, cssTemplate }: PresentationExportProps) =>
       padding-top: 20px;
     }
     
-    ${cssTemplate || ''}
+    /* Custom template styles */
+    ${cssTemplate || '/* No custom CSS template provided */'}
   </style>
 </head>
 <body>

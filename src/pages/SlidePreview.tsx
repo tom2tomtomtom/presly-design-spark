@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -10,15 +9,21 @@ const SlidePreview = () => {
   const location = useLocation();
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [slides, setSlides] = useState<any[]>([]);
+  const [cssTemplate, setCssTemplate] = useState<string | null>(null);
   
   // Parse slides from URL or use demo slides
   useEffect(() => {
     try {
       // Try to get slides from location state
-      if (location.state && location.state.slides) {
-        setSlides(location.state.slides);
+      if (location.state) {
+        if (location.state.slides) {
+          setSlides(location.state.slides);
+        }
         if (location.state.startIndex) {
           setCurrentSlideIndex(location.state.startIndex);
+        }
+        if (location.state.cssTemplate) {
+          setCssTemplate(location.state.cssTemplate);
         }
         return;
       }
@@ -26,38 +31,45 @@ const SlidePreview = () => {
       // If no slides in state, check for encoded slides in URL
       const params = new URLSearchParams(location.search);
       const encodedSlides = params.get('slides');
+      const encodedCss = params.get('css');
+      
       if (encodedSlides) {
         const decodedSlides = JSON.parse(atob(encodedSlides));
         setSlides(decodedSlides);
-        return;
       }
       
-      // Fallback to demo slides
-      setSlides([
-        {
-          id: 1,
-          title: "Welcome to HTML PPT Generator",
-          content: "Transform documents into beautiful HTML presentations",
-          type: "title"
-        },
-        {
-          id: 2,
-          title: "Key Features",
-          content: [
-            "Upload DOC files and templates",
-            "AI-powered editing and feedback",
-            "Export to HTML and PowerPoint",
-            "Beautiful, responsive designs"
-          ],
-          type: "bullets"
-        },
-        {
-          id: 3,
-          title: "Get Started Today",
-          content: "Visit the main page to create your first presentation",
-          type: "text"
-        }
-      ]);
+      if (encodedCss) {
+        setCssTemplate(atob(encodedCss));
+      }
+      
+      // Fallback to demo slides if no slides found
+      if (!encodedSlides) {
+        setSlides([
+          {
+            id: 1,
+            title: "Welcome to HTML PPT Generator",
+            content: "Transform documents into beautiful HTML presentations",
+            type: "title"
+          },
+          {
+            id: 2,
+            title: "Key Features",
+            content: [
+              "Upload DOC files and templates",
+              "AI-powered editing and feedback",
+              "Export to HTML and PowerPoint",
+              "Beautiful, responsive designs"
+            ],
+            type: "bullets"
+          },
+          {
+            id: 3,
+            title: "Get Started Today",
+            content: "Visit the main page to create your first presentation",
+            type: "text"
+          }
+        ]);
+      }
     } catch (error) {
       console.error("Error parsing slides:", error);
       navigate("/");
@@ -103,7 +115,7 @@ const SlidePreview = () => {
   return (
     <div className="presentation-mode">
       {slides[currentSlideIndex] && (
-        <SlideView slide={slides[currentSlideIndex]} />
+        <SlideView slide={slides[currentSlideIndex]} cssTemplate={cssTemplate} />
       )}
       
       <div className="presentation-controls">

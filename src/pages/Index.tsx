@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
@@ -30,11 +31,14 @@ const Index = () => {
       reader.onload = (e) => {
         if (e.target && typeof e.target.result === 'string') {
           console.log("CSS template loaded, length:", e.target.result.length);
+          console.log("CSS sample:", e.target.result.substring(0, 200)); // Log a sample of the CSS for debugging
           setCssTemplate(e.target.result);
         }
       };
       reader.readAsText(templateFile);
-    } else {
+      toast.success(`CSS template loaded: ${templateFile.name}`);
+    } else if (templateFile) {
+      toast.error("Unsupported template file. Please upload a CSS file.");
       setCssTemplate(null);
     }
   }, [templateFile]);
