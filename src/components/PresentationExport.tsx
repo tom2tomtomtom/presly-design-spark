@@ -614,11 +614,26 @@ const PresentationExport = ({ slides, cssTemplate }: PresentationExportProps) =>
       const accentColorHex = accentColor.replace('#', '');
       const textColorHex = textColor.replace('#', '');
       
-      // Add a comprehensive slide master with proper styling
+      // Create multiple slide masters for different slide types
+      // First, the base master slide
       pres.defineSlideMaster({
         title: 'MASTER_SLIDE',
         background: { color: bgColorHex },
         objects: [
+          // Add decorative shapes to match the template aesthetic
+          { 'rect': { 
+            'x': '85%', 'y': '15%', 'w': 1, 'h': 1,
+            'fill': { 'color': accentColorHex+'33' }, // 20% opacity
+            'shadow': { 'type': 'outer', 'blur': 3, 'offset': 2, 'angle': 45, 'color': '000000', 'opacity': 0.15 },
+            'rotate': 45
+          }},
+          { 'ellipse': { 
+            'x': '10%', 'y': '85%', 'w': 0.5, 'h': 0.5,
+            'fill': { 'color': secondaryColor.replace('#', '')+'33' }, // 20% opacity
+            'line': { 'color': secondaryColor.replace('#', '') },
+            'lineSize': 1
+          }},
+          // Title placeholder
           { 'placeholder': { 
             'options': { 
               name: 'title', 
@@ -633,6 +648,166 @@ const PresentationExport = ({ slides, cssTemplate }: PresentationExportProps) =>
           }}
         ],
         slideNumber: { x: 0.5, y: '90%', color: textColorHex }
+      });
+      
+      // Title slide master with centered title and subtitle
+      pres.defineSlideMaster({
+        title: 'TITLE_SLIDE',
+        background: { color: bgColorHex },
+        objects: [
+          // Background elements to match the template aesthetic
+          { 'rect': { 
+            'x': 0, 'y': 0, 'w': '100%', 'h': '100%',
+            'fill': { 'color': bgColorHex }
+          }},
+          
+          // Add decorative shapes similar to those in the template
+          { 'ellipse': { 
+            'x': '80%', 'y': '15%', 'w': 2.5, 'h': 2.5,
+            'fill': { 'color': accentColorHex+'22' }, // 13% opacity
+            'line': { 'color': accentColorHex, 'width': 1 }
+          }},
+          { 'triangle': { 
+            'x': '10%', 'y': '75%', 'w': 3, 'h': 3,
+            'fill': { 'color': secondaryColor.replace('#', '')+'22' }, // 13% opacity
+            'line': { 'color': secondaryColor.replace('#', ''), 'width': 1 },
+            'rotate': 15
+          }},
+          { 'rect': { 
+            'x': '75%', 'y': '65%', 'w': 2, 'h': 2,
+            'fill': { 'color': accentColorHex+'22' }, // 13% opacity
+            'line': { 'color': accentColorHex },
+            'rotate': 45
+          }},
+          
+          // Gradient overlay
+          { 'rect': { 
+            'x': 0, 'y': 0, 'w': '100%', 'h': '100%',
+            'fill': { 'type': 'gradient', 'color': 'ffffff', 'alpha': 10 }
+          }},
+          
+          // Title and subtitle placeholders
+          { 'placeholder': { 
+            'options': { 
+              name: 'title', 
+              type: 'title', 
+              x: 0.5, y: 2.5, w: '80%', h: 1.5,
+              align: 'center', 
+              bold: true, 
+              fontSize: 44, 
+              color: accentColorHex,
+              fontFace: cssVars['--font-heading'] || 'Arial'
+            } 
+          }},
+          { 'placeholder': { 
+            'options': { 
+              name: 'subtitle', 
+              type: 'subtitle', 
+              x: 0.5, y: 4, w: '80%', h: 1,
+              align: 'center', 
+              fontSize: 20, 
+              color: textColorHex,
+              fontFace: cssVars['--font-body'] || 'Arial'
+            } 
+          }},
+          
+          // Add footer at bottom
+          { 'text': { 
+            text: 'Presly Design - Professional Presentations',
+            options: {
+              x: 0.5, y: 6.8, w: '90%', 
+              align: 'center',
+              fontSize: 12, 
+              color: textColorHex+'99', // 60% opacity
+              fontFace: cssVars['--font-body'] || 'Arial'
+            }
+          }}
+        ]
+      });
+      
+      // Two-column slide master
+      pres.defineSlideMaster({
+        title: 'TWO_COLUMN_SLIDE',
+        background: { color: bgColorHex },
+        objects: [
+          // Add decorative shapes similar to those in the template
+          { 'rect': { 
+            'x': '90%', 'y': '10%', 'w': 0.8, 'h': 0.8,
+            'fill': { 'color': accentColorHex+'33' }, // 20% opacity
+            'rotate': 45
+          }},
+          { 'ellipse': { 
+            'x': '5%', 'y': '80%', 'w': 0.6, 'h': 0.6,
+            'fill': { 'color': secondaryColor.replace('#', '')+'33' } // 20% opacity
+          }},
+          
+          // Add a custom header bar
+          { 'rect': { 
+            'x': 0, 'y': 0, 'w': '100%', 'h': 0.25,
+            'fill': { 'color': accentColorHex+'33' } // 20% opacity
+          }},
+          
+          // Title placeholder with underline
+          { 'placeholder': { 
+            'options': { 
+              name: 'title', 
+              type: 'title', 
+              x: 0.5, y: 0.5, w: '90%', h: 1.0,
+              align: 'left', 
+              bold: true, 
+              fontSize: 28, 
+              color: accentColorHex,
+              fontFace: cssVars['--font-heading'] || 'Arial'
+            } 
+          }},
+          
+          // Separator line between title and content
+          { 'line': { 
+            'x': 0.5, 'y': 1.5, 'w': '10%', 'h': 0,
+            'line': { 'color': accentColorHex, 'width': 3 }
+          }},
+          
+          // Left column placeholder
+          { 'placeholder': { 
+            'options': { 
+              name: 'leftColumn', 
+              type: 'body', 
+              x: 0.5, y: 1.8, w: '45%', h: 4,
+              fontSize: 16, 
+              color: textColorHex,
+              fontFace: cssVars['--font-body'] || 'Arial'
+            } 
+          }},
+          
+          // Right column placeholder  
+          { 'placeholder': { 
+            'options': { 
+              name: 'rightColumn', 
+              type: 'body', 
+              x: '52%', y: 1.8, w: '45%', h: 4,
+              fontSize: 16, 
+              color: textColorHex,
+              fontFace: cssVars['--font-body'] || 'Arial'
+            } 
+          }},
+          
+          // Footer
+          { 'rect': { 
+            'x': 0, 'y': 7.0, 'w': '100%', 'h': 0.2,
+            'fill': { 'color': accentColorHex+'22' } // 13% opacity
+          }},
+          { 'text': { 
+            text: 'Presly Design',
+            options: {
+              x: 0.5, y: 7.2, w: 2, 
+              align: 'left',
+              fontSize: 10, 
+              color: textColorHex+'99', // 60% opacity
+              fontFace: cssVars['--font-body'] || 'Arial'
+            }
+          }}
+        ],
+        slideNumber: { x: '95%', y: '95%', color: textColorHex }
       });
       
       // Get the HTML content - either from localStorage or from state
@@ -684,22 +859,60 @@ const PresentationExport = ({ slides, cssTemplate }: PresentationExportProps) =>
             }
           }
           
-          // Create slide with a specific layout
-          const pptSlide = pres.addSlide({ masterName: 'MASTER_SLIDE' });
+          // Determine the appropriate slide master based on content
+          let masterName = 'MASTER_SLIDE';
           
-          // Add title using accent color and font from CSS
-          pptSlide.addText(slideTitle, { 
-            x: 0.5, 
-            y: 0.5, 
-            w: '90%', 
-            fontSize: 28,
-            bold: true,
-            fontFace: cssVars['--font-heading'] || 'Arial',
-            color: accentColorHex
-          });
+          // Check if this is a title slide (first slide or has title-slide class)
+          if (index === 0 || htmlSlide.classList.contains('title-slide')) {
+            masterName = 'TITLE_SLIDE';
+          }
+          
+          // Check if this is a two-column slide
+          const twoColumnLayout = htmlSlide.querySelector('.two-columns');
+          if (twoColumnLayout) {
+            masterName = 'TWO_COLUMN_SLIDE';
+          }
+          
+          console.log(`Using ${masterName} for slide ${index + 1}`);
+          
+          // Create slide with specific layout
+          const pptSlide = pres.addSlide({ masterName });
+          
+          // For title slide, we handle title and content slightly differently
+          if (masterName === 'TITLE_SLIDE') {
+            // Add title centered with larger font
+            pptSlide.addText(slideTitle, {
+              placeholder: 'title',
+              fontSize: 44,
+              bold: true,
+              color: accentColorHex,
+              fontFace: cssVars['--font-heading'] || 'Arial',
+              align: 'center'
+            });
+            
+            // Add subtitle if content is a simple string
+            if (typeof contentElement?.textContent === 'string') {
+              const contentText = contentElement.textContent.trim();
+              pptSlide.addText(contentText, {
+                placeholder: 'subtitle',
+                fontSize: 20,
+                color: textColorHex,
+                fontFace: cssVars['--font-body'] || 'Arial',
+                align: 'center'
+              });
+            }
+          } else {
+            // For regular slides, add title as normal
+            pptSlide.addText(slideTitle, { 
+              placeholder: 'title',
+              bold: true,
+              fontFace: cssVars['--font-heading'] || 'Arial',
+              color: accentColorHex
+            });
+          }
           
           // Get content from the HTML (this content element is already declared above)
-          if (contentElement) {
+          if (contentElement && masterName !== 'TITLE_SLIDE') {
             // Check for bullet lists with different possible class names
             const bulletList = contentElement.querySelector('.slide-bullet-list') || 
                                contentElement.querySelector('.slide-points') || 
@@ -718,10 +931,10 @@ const PresentationExport = ({ slides, cssTemplate }: PresentationExportProps) =>
                 }
               });
               
-              // Add bullet points one by one to ensure compatibility
+              // Add all bullet points together with proper styling
               if (bulletPoints.length > 0) {
                 // Try to find bullet color in the CSS if possible
-                let bulletColor = '4a4a4a';
+                let bulletColor = accentColorHex; // Use accent color as default for bullets
                 try {
                   // Try to extract bullet color from ::before or direct styling
                   const bulletStyleMatch = cssTemplate?.match(/\.slide-points\s+li:before.*?background-color:\s*([^;]*)|\.slide-bullet-list\s+li:before.*?background-color:\s*([^;]*)|ul\s+li:before.*?background-color:\s*([^;]*)/);
@@ -744,30 +957,35 @@ const PresentationExport = ({ slides, cssTemplate }: PresentationExportProps) =>
                   console.log("Error extracting bullet color:", error);
                 }
                 
-                bulletPoints.forEach((bulletText, bulletIndex) => {
-                  pptSlide.addText(bulletText, {
-                    x: 0.5,
-                    y: 1.5 + (bulletIndex * 0.4),
-                    w: '90%',
-                    bullet: true,
-                    fontSize: 16,
-                    color: bulletColor,
-                    fontFace: cssVars['--font-body'] || 'Arial'
-                  });
+                // Add all bullet points as one element with bullet formatting
+                // This better preserves the template styling
+                pptSlide.addText(bulletPoints, {
+                  x: 0.5,
+                  y: 1.8,
+                  w: '90%',
+                  bullet: { 
+                    type: 'bullet',
+                    color: bulletColor
+                  },
+                  fontSize: 16,
+                  color: textColorHex,
+                  fontFace: cssVars['--font-body'] || 'Arial',
+                  lineSpacing: 24 // Increase spacing between bullet points
                 });
+                
+                // Log success
+                console.log(`Added ${bulletPoints.length} bullet points with color ${bulletColor}`);
               }
             } else {
               console.log("Adding HTML text content");
               
               // Get paragraphs or direct text content
-              // Check for two-column layout first
-              const twoColumnLayout = contentElement.querySelector('.two-columns');
-              
-              if (twoColumnLayout) {
-                console.log("Found two-column layout");
+              // Check if we're already handling a two-column layout slide from the masterName
+              if (masterName === 'TWO_COLUMN_SLIDE') {
+                console.log("Processing two-column layout");
                 
                 // For two column layout, handle each column separately
-                const columns = twoColumnLayout.querySelectorAll('.column');
+                const columns = htmlSlide.querySelectorAll('.column');
                 if (columns.length >= 2) {
                   // Left column
                   const leftColumn = columns[0];
@@ -776,31 +994,46 @@ const PresentationExport = ({ slides, cssTemplate }: PresentationExportProps) =>
                   if (leftBullets) {
                     // Process left column bullets
                     const bullets = leftBullets.querySelectorAll('li');
-                    const bulletTexts = Array.from(bullets).map(bullet => bullet.textContent?.trim() || '');
+                    const bulletTexts = Array.from(bullets)
+                      .map(bullet => bullet.textContent?.trim() || '')
+                      .filter(text => text.length > 0);
                     
                     if (bulletTexts.length > 0) {
-                      bulletTexts.forEach((text, i) => {
-                        pptSlide.addText(text, {
-                          x: 0.5,
-                          y: 1.5 + (i * 0.4),
-                          w: '40%', // Narrower for column layout
-                          bullet: true,
-                          fontSize: 14,
-                          color: '4a4a4a'
-                        });
+                      // Add bullet points to left column placeholder
+                      pptSlide.addText(bulletTexts, {
+                        placeholder: 'leftColumn',
+                        bullet: { type: 'bullet' },
+                        fontSize: 14,
+                        color: textColorHex,
+                        fontFace: cssVars['--font-body'] || 'Arial'
                       });
                     }
                   } else {
                     // Regular text in left column
-                    const leftText = leftColumn.textContent?.trim();
-                    if (leftText) {
-                      pptSlide.addText(leftText, {
-                        x: 0.5,
-                        y: 1.5,
-                        w: '40%',
-                        fontSize: 14,
-                        color: '4a4a4a'
-                      });
+                    const paragraphs = leftColumn.querySelectorAll('p');
+                    if (paragraphs.length > 0) {
+                      const paragraphTexts = Array.from(paragraphs)
+                        .map(p => p.textContent?.trim() || '')
+                        .filter(t => t.length > 0);
+                      
+                      if (paragraphTexts.length > 0) {
+                        pptSlide.addText(paragraphTexts.join('\n\n'), {
+                          placeholder: 'leftColumn',
+                          fontSize: 14,
+                          color: textColorHex,
+                          fontFace: cssVars['--font-body'] || 'Arial'
+                        });
+                      }
+                    } else {
+                      const leftText = leftColumn.textContent?.trim();
+                      if (leftText) {
+                        pptSlide.addText(leftText, {
+                          placeholder: 'leftColumn',
+                          fontSize: 14,
+                          color: textColorHex,
+                          fontFace: cssVars['--font-body'] || 'Arial'
+                        });
+                      }
                     }
                   }
                   
@@ -810,29 +1043,74 @@ const PresentationExport = ({ slides, cssTemplate }: PresentationExportProps) =>
                   
                   if (image && image.src) {
                     console.log("Found image in right column");
+                    
                     // Note: PowerPoint doesn't support adding remote images directly
                     // We would need to download it first, which isn't feasible here
-                    // So we'll use a text placeholder
+                    // Add a placeholder for image along with box
                     
-                    pptSlide.addText("[Image would appear here]", {
-                      x: '55%',
-                      y: 1.5,
-                      w: '40%',
+                    // First, add a gray box as image placeholder
+                    pptSlide.addShape(pres.ShapeType.rect, {
+                      placeholder: 'rightColumn',
+                      fill: { color: 'EEEEEE' },
+                      line: { color: 'AAAAAA', width: 1 },
+                      rectRadius: 5
+                    });
+                    
+                    // Then add image placeholder text
+                    pptSlide.addText("[ Image Placeholder ]", {
+                      placeholder: 'rightColumn',
                       fontSize: 14,
                       color: '9e9e9e',
-                      align: 'center'
+                      align: 'center',
+                      valign: 'middle',
+                      italic: true
                     });
                   } else {
                     // Text in right column
-                    const rightText = rightColumn.textContent?.trim();
-                    if (rightText) {
-                      pptSlide.addText(rightText, {
-                        x: '55%',
-                        y: 1.5,
-                        w: '40%',
-                        fontSize: 14,
-                        color: '4a4a4a'
-                      });
+                    const rightBullets = rightColumn.querySelector('ul, .slide-points, .slide-bullet-list');
+                    
+                    if (rightBullets) {
+                      // Process right column bullets
+                      const bullets = rightBullets.querySelectorAll('li');
+                      const bulletTexts = Array.from(bullets)
+                        .map(bullet => bullet.textContent?.trim() || '')
+                        .filter(text => text.length > 0);
+                      
+                      if (bulletTexts.length > 0) {
+                        pptSlide.addText(bulletTexts, {
+                          placeholder: 'rightColumn',
+                          bullet: { type: 'bullet' },
+                          fontSize: 14,
+                          color: textColorHex,
+                          fontFace: cssVars['--font-body'] || 'Arial'
+                        });
+                      }
+                    } else {
+                      const paragraphs = rightColumn.querySelectorAll('p');
+                      if (paragraphs.length > 0) {
+                        const paragraphTexts = Array.from(paragraphs)
+                          .map(p => p.textContent?.trim() || '')
+                          .filter(t => t.length > 0);
+                        
+                        if (paragraphTexts.length > 0) {
+                          pptSlide.addText(paragraphTexts.join('\n\n'), {
+                            placeholder: 'rightColumn',
+                            fontSize: 14,
+                            color: textColorHex,
+                            fontFace: cssVars['--font-body'] || 'Arial'
+                          });
+                        }
+                      } else {
+                        const rightText = rightColumn.textContent?.trim();
+                        if (rightText) {
+                          pptSlide.addText(rightText, {
+                            placeholder: 'rightColumn',
+                            fontSize: 14,
+                            color: textColorHex,
+                            fontFace: cssVars['--font-body'] || 'Arial'
+                          });
+                        }
+                      }
                     }
                   }
                 }
@@ -889,16 +1167,52 @@ const PresentationExport = ({ slides, cssTemplate }: PresentationExportProps) =>
             }
           }
           
+          // Add footer elements to match the template
+          // First check if the slide has a footer element we can copy text from
+          const footerElement = htmlSlide.querySelector('.slide-footer');
+          
+          // Add line separator
+          pptSlide.addShape(pres.ShapeType.line, {
+            x: 0.5, y: 6.8, w: '90%', 
+            line: { color: accentColorHex+'66', width: 1 } // 40% opacity
+          });
+          
           // Add slide number with secondary color
           const secondaryColorHex = secondaryColor.replace('#', '');
           pptSlide.addText(`Slide ${index + 1}/${htmlSlides.length}`, {
-            x: 0.5,
-            y: 6.5,
+            x: '90%',
+            y: 7.0,
             w: 2,
+            align: 'right',
             fontSize: 10,
             fontFace: cssVars['--font-body'] || 'Arial',
             color: secondaryColorHex
           });
+          
+          // Add footer text if available from template
+          if (footerElement) {
+            const footerText = footerElement.textContent?.trim();
+            if (footerText) {
+              pptSlide.addText(footerText, {
+                x: 0.5,
+                y: 7.0,
+                w: '50%',
+                fontSize: 10,
+                fontFace: cssVars['--font-body'] || 'Arial',
+                color: textColorHex+'99' // 60% opacity
+              });
+            }
+          } else {
+            // Add default footer
+            pptSlide.addText('Presly Design Presentation', {
+              x: 0.5,
+              y: 7.0,
+              w: '50%',
+              fontSize: 10,
+              fontFace: cssVars['--font-body'] || 'Arial',
+              color: textColorHex+'99' // 60% opacity
+            });
+          }
         });
       } else {
         console.log("No slides found in HTML, using slide data directly");
