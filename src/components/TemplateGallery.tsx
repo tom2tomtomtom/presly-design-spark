@@ -164,7 +164,7 @@ const TemplateGallery: React.FC<TemplateGalleryProps> = ({ onSelectTemplate }) =
                                     template.id === 'minimal' ? '#666666' : '#333333'
                   }}
                 ></div>
-              </div>}
+              </div>
             </div>
             <CardContent className="p-4">
               <h3 className="font-medium">{template.name}</h3>
