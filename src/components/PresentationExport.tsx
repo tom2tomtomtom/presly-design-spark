@@ -642,13 +642,13 @@ const PresentationExport = ({ slides, cssTemplate }: PresentationExportProps) =>
           // Add decorative shapes to match the template aesthetic
           { 'rect': { 
             'x': '85%', 'y': '15%', 'w': 1, 'h': 1,
-            'fill': { 'color': accentColorHex+'33' }, // 20% opacity
+            'fill': { 'color': accentColorHex, 'transparency': 80 }, // 20% opacity (80% transparent)
             'shadow': { 'type': 'outer', 'blur': 3, 'offset': 2, 'angle': 45, 'color': '000000', 'opacity': 0.15 },
             'rotate': 45
           }},
           { 'ellipse': { 
             'x': '10%', 'y': '85%', 'w': 0.5, 'h': 0.5,
-            'fill': { 'color': secondaryColor.replace('#', '')+'33' }, // 20% opacity
+            'fill': { 'color': secondaryColor.replace('#', ''), 'transparency': 80 }, // 20% opacity
             'line': { 'color': secondaryColor.replace('#', '') },
             'lineSize': 1
           }},
@@ -683,18 +683,18 @@ const PresentationExport = ({ slides, cssTemplate }: PresentationExportProps) =>
           // Add decorative shapes similar to those in the template
           { 'ellipse': { 
             'x': '80%', 'y': '15%', 'w': 2.5, 'h': 2.5,
-            'fill': { 'color': accentColorHex+'22' }, // 13% opacity
+            'fill': { 'color': accentColorHex, 'transparency': 87 }, // 13% opacity (87% transparent)
             'line': { 'color': accentColorHex, 'width': 1 }
           }},
           { 'triangle': { 
             'x': '10%', 'y': '75%', 'w': 3, 'h': 3,
-            'fill': { 'color': secondaryColor.replace('#', '')+'22' }, // 13% opacity
+            'fill': { 'color': secondaryColor.replace('#', ''), 'transparency': 87 }, // 13% opacity
             'line': { 'color': secondaryColor.replace('#', ''), 'width': 1 },
             'rotate': 15
           }},
           { 'rect': { 
             'x': '75%', 'y': '65%', 'w': 2, 'h': 2,
-            'fill': { 'color': accentColorHex+'22' }, // 13% opacity
+            'fill': { 'color': accentColorHex, 'transparency': 87 }, // 13% opacity
             'line': { 'color': accentColorHex },
             'rotate': 45
           }},
@@ -702,7 +702,7 @@ const PresentationExport = ({ slides, cssTemplate }: PresentationExportProps) =>
           // Gradient overlay
           { 'rect': { 
             'x': 0, 'y': 0, 'w': '100%', 'h': '100%',
-            'fill': { 'type': 'gradient', 'color': 'ffffff', 'alpha': 10 }
+            'fill': { 'type': 'gradient', 'color': 'ffffff', 'transparency': 90 }
           }},
           
           // Title and subtitle placeholders
@@ -737,7 +737,8 @@ const PresentationExport = ({ slides, cssTemplate }: PresentationExportProps) =>
               x: 0.5, y: 6.8, w: '90%', 
               align: 'center',
               fontSize: 12, 
-              color: textColorHex+'99', // 60% opacity
+              color: textColorHex,
+              transparency: 40, // 60% opacity (40% transparent)
               fontFace: cssVars['--font-body'] || 'Arial'
             }
           }}
@@ -752,18 +753,18 @@ const PresentationExport = ({ slides, cssTemplate }: PresentationExportProps) =>
           // Add decorative shapes similar to those in the template
           { 'rect': { 
             'x': '90%', 'y': '10%', 'w': 0.8, 'h': 0.8,
-            'fill': { 'color': accentColorHex+'33' }, // 20% opacity
+            'fill': { 'color': accentColorHex, 'transparency': 80 }, // 20% opacity
             'rotate': 45
           }},
           { 'ellipse': { 
             'x': '5%', 'y': '80%', 'w': 0.6, 'h': 0.6,
-            'fill': { 'color': secondaryColor.replace('#', '')+'33' } // 20% opacity
+            'fill': { 'color': secondaryColor.replace('#', ''), 'transparency': 80 } // 20% opacity
           }},
           
           // Add a custom header bar
           { 'rect': { 
             'x': 0, 'y': 0, 'w': '100%', 'h': 0.25,
-            'fill': { 'color': accentColorHex+'33' } // 20% opacity
+            'fill': { 'color': accentColorHex, 'transparency': 80 } // 20% opacity
           }},
           
           // Title placeholder with underline
@@ -813,7 +814,7 @@ const PresentationExport = ({ slides, cssTemplate }: PresentationExportProps) =>
           // Footer
           { 'rect': { 
             'x': 0, 'y': 7.0, 'w': '100%', 'h': 0.2,
-            'fill': { 'color': accentColorHex+'22' } // 13% opacity
+            'fill': { 'color': accentColorHex, 'transparency': 87 } // 13% opacity
           }},
           { 'text': { 
             text: 'Presly Design',
@@ -821,7 +822,8 @@ const PresentationExport = ({ slides, cssTemplate }: PresentationExportProps) =>
               x: 0.5, y: 7.2, w: 2, 
               align: 'left',
               fontSize: 10, 
-              color: textColorHex+'99', // 60% opacity
+              color: textColorHex,
+              transparency: 40, // 60% opacity (40% transparent)
               fontFace: cssVars['--font-body'] || 'Arial'
             }
           }}
@@ -1232,7 +1234,7 @@ const PresentationExport = ({ slides, cssTemplate }: PresentationExportProps) =>
           // Add line separator
           pptSlide.addShape(pres.ShapeType.line, {
             x: 0.5, y: 6.8, w: '90%', 
-            line: { color: accentColorHex+'66', width: 1 } // 40% opacity
+            line: { color: accentColorHex, width: 1, transparency: 60 } // 40% opacity
           });
           
           // Add slide number with secondary color
@@ -1257,7 +1259,8 @@ const PresentationExport = ({ slides, cssTemplate }: PresentationExportProps) =>
                 w: '50%',
                 fontSize: 10,
                 fontFace: cssVars['--font-body'] || 'Arial',
-                color: textColorHex+'99' // 60% opacity
+                color: textColorHex,
+                transparency: 40 // 60% opacity (40% transparent)
               });
             }
           } else {
@@ -1268,7 +1271,8 @@ const PresentationExport = ({ slides, cssTemplate }: PresentationExportProps) =>
               w: '50%',
               fontSize: 10,
               fontFace: cssVars['--font-body'] || 'Arial',
-              color: textColorHex+'99' // 60% opacity
+              color: textColorHex,
+              transparency: 40 // 60% opacity (40% transparent)
             });
           }
         });
