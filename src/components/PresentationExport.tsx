@@ -142,61 +142,323 @@ const PresentationExport = ({ slides, cssTemplate }: PresentationExportProps) =>
     setIsGeneratingEnhanced(true);
     
     try {
+      // Generate enhanced HTML without using the API directly from the client
+      // Instead, we'll use a locally generated enhanced version as a fallback
+      // that doesn't require API calls from the browser
+      
+      // Extract the slide data for the prompt
       const slidesData = slides.map(slide => ({
         title: slide.title,
         content: slide.content,
         type: slide.type
       }));
       
-      const cssPrompt = cssTemplate 
-        ? `\nUse the following CSS as a basis for styling, but enhance it as needed:\n\`\`\`css\n${cssTemplate}\n\`\`\``
-        : "";
+      // Create a more advanced version of the basic HTML with better styling and navigation
+      const enhancedHtml = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Enhanced Presentation</title>
+  <style>
+    /* Reset and base styles */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      background-color: #f0f0f0;
+      overflow: hidden;
+    }
+    
+    /* Slide container */
+    .slides-container {
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      position: relative;
+    }
+    
+    /* Individual slides */
+    .slide {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      padding: 2rem;
+      background-color: white;
+      transition: transform 0.5s ease;
+      transform: translateX(100%);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+    
+    .slide.active {
+      transform: translateX(0);
+    }
+    
+    .slide.prev {
+      transform: translateX(-100%);
+    }
+    
+    /* Slide title */
+    .slide-title {
+      font-size: 2.5rem;
+      margin-bottom: 1.5rem;
+      color: #2c3e50;
+      text-align: left;
+      border-bottom: 2px solid #3498db;
+      padding-bottom: 0.5rem;
+    }
+    
+    /* Slide content area */
+    .slide-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      font-size: 1.5rem;
+    }
+    
+    /* Bullet list styling */
+    .slide-bullet-list {
+      list-style-type: none;
+      margin-left: 1rem;
+    }
+    
+    .slide-bullet-list li {
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+    }
+    
+    .slide-bullet-list li:before {
+      content: "";
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      background-color: #3498db;
+      border-radius: 50%;
+      margin-right: 1rem;
+    }
+    
+    /* Title slide special styling */
+    .slide.title-slide .slide-content {
+      font-size: 2rem;
+      text-align: center;
+      font-weight: 300;
+      color: #7f8c8d;
+    }
+    
+    /* Navigation controls */
+    .slide-controls {
+      position: fixed;
+      bottom: 1rem;
+      left: 0;
+      right: 0;
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+      z-index: 100;
+    }
+    
+    .slide-controls button {
+      background-color: #3498db;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 0.5rem 1rem;
+      cursor: pointer;
+      font-size: 1rem;
+      transition: background-color 0.3s ease;
+    }
+    
+    .slide-controls button:hover {
+      background-color: #2980b9;
+    }
+    
+    .slide-controls button:disabled {
+      background-color: #bdc3c7;
+      cursor: not-allowed;
+    }
+    
+    /* Progress indicator */
+    .progress-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 5px;
+      background-color: #3498db;
+      transition: width 0.3s ease;
+      z-index: 100;
+    }
+    
+    /* Slide counter */
+    .slide-counter {
+      position: fixed;
+      bottom: 1rem;
+      right: 1rem;
+      font-size: 0.875rem;
+      color: #7f8c8d;
+      z-index: 100;
+    }
+    
+    /* Apply custom CSS if provided */
+    ${cssTemplate || ''}
+    
+    /* Override styles to ensure CSS template is applied */
+    :root {
+      --accent-color: ${cssTemplate?.match(/--accent-color:\s*([^;]*)/)?.[1]?.trim() || '#3498db'};
+      --bg-light-grey: ${cssTemplate?.match(/--bg-light-grey:\s*([^;]*)/)?.[1]?.trim() || '#f0f0f0'};
+      --text-dark: ${cssTemplate?.match(/--text-dark:\s*([^;]*)/)?.[1]?.trim() || '#333'};
+    }
+    
+    .slide-title {
+      color: var(--accent-color);
+      border-bottom-color: var(--accent-color);
+    }
+    
+    .slide-bullet-list li:before {
+      background-color: var(--accent-color);
+    }
+    
+    .slide-controls button,
+    .progress-bar {
+      background-color: var(--accent-color);
+    }
+  </style>
+</head>
+<body>
+  <div class="slides-container">
+    ${slides.map((slide, index) => `
+      <div id="slide-${index + 1}" class="slide ${index === 0 ? 'active' : ''} ${slide.type === 'title' ? 'title-slide' : ''}">
+        <h2 class="slide-title">${slide.title}</h2>
+        <div class="slide-content">
+          ${slide.type === 'bullets'
+            ? `<ul class="slide-bullet-list">
+                ${Array.isArray(slide.content) 
+                  ? slide.content.map(item => `<li>${item}</li>`).join('') 
+                  : ''}
+              </ul>`
+            : slide.type === 'title'
+              ? `<p>${typeof slide.content === 'string' ? slide.content : ''}</p>`
+              : `<p>${typeof slide.content === 'string' ? slide.content : ''}</p>`
+          }
+        </div>
+      </div>
+    `).join('')}
+  </div>
+  
+  <div class="progress-bar" id="progress-bar"></div>
+  <div class="slide-counter" id="slide-counter">Slide 1/${slides.length}</div>
+  
+  <div class="slide-controls">
+    <button id="prev-slide" disabled>Previous</button>
+    <button id="next-slide">Next</button>
+  </div>
+  
+  <script>
+    // Presentation navigation logic
+    document.addEventListener('DOMContentLoaded', function() {
+      const slides = document.querySelectorAll('.slide');
+      const totalSlides = slides.length;
+      let currentSlide = 0;
       
-      const response = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": apiKey,
-          "anthropic-version": "2023-06-01"
-        },
-        body: JSON.stringify({
-          model: "claude-3-sonnet-20240229",
-          max_tokens: 4000,
-          messages: [
-            {
-              role: "user",
-              content: `Generate an enhanced HTML presentation from the following slides data:
-${JSON.stringify(slidesData, null, 2)}
-
-Please create a visually appealing HTML presentation with:
-1. Modern responsive design
-2. Nice transitions between slides
-3. Proper styling for each slide type
-4. A navigation system
-5. Clean typography${cssPrompt}
-
-Return ONLY the complete HTML code without any explanations or markdown. The HTML should be ready to save as a standalone file.`
-            }
-          ]
-        })
-      });
+      const prevButton = document.getElementById('prev-slide');
+      const nextButton = document.getElementById('next-slide');
+      const progressBar = document.getElementById('progress-bar');
+      const slideCounter = document.getElementById('slide-counter');
       
-      if (!response.ok) {
-        throw new Error("Failed to generate enhanced HTML");
+      function updateSlides() {
+        // Update slide classes
+        slides.forEach((slide, index) => {
+          if (index === currentSlide) {
+            slide.className = slide.className.replace(/prev|active/g, '') + ' active';
+          } else if (index < currentSlide) {
+            slide.className = slide.className.replace(/prev|active/g, '') + ' prev';
+          } else {
+            slide.className = slide.className.replace(/prev|active/g, '');
+          }
+        });
+        
+        // Update navigation buttons
+        prevButton.disabled = currentSlide === 0;
+        nextButton.disabled = currentSlide === totalSlides - 1;
+        
+        // Update progress bar
+        const progress = ((currentSlide + 1) / totalSlides) * 100;
+        progressBar.style.width = \`\${progress}%\`;
+        
+        // Update slide counter
+        slideCounter.textContent = \`Slide \${currentSlide + 1}/\${totalSlides}\`;
       }
       
-      const data = await response.json();
-      const enhancedHtml = data.content[0].text;
+      function goToSlide(index) {
+        if (index >= 0 && index < totalSlides) {
+          currentSlide = index;
+          updateSlides();
+        }
+      }
       
-      const htmlMatch = enhancedHtml.match(/```html\s*([\s\S]*?)\s*```/) || 
-                         enhancedHtml.match(/```\s*([\s\S]*?)\s*```/) ||
-                         [null, enhancedHtml];
+      // Initialize
+      updateSlides();
       
-      setHtmlContent(htmlMatch[1] || enhancedHtml);
+      // Event listeners
+      prevButton.addEventListener('click', () => goToSlide(currentSlide - 1));
+      nextButton.addEventListener('click', () => goToSlide(currentSlide + 1));
+      
+      // Keyboard navigation
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') {
+          goToSlide(currentSlide + 1);
+        } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+          goToSlide(currentSlide - 1);
+        } else if (e.key === 'Home') {
+          goToSlide(0);
+        } else if (e.key === 'End') {
+          goToSlide(totalSlides - 1);
+        }
+      });
+      
+      // Swipe navigation for touch devices
+      let touchStartX = 0;
+      let touchEndX = 0;
+      
+      document.addEventListener('touchstart', (e) => {
+        touchStartX = e.changedTouches[0].screenX;
+      });
+      
+      document.addEventListener('touchend', (e) => {
+        touchEndX = e.changedTouches[0].screenX;
+        handleSwipe();
+      });
+      
+      function handleSwipe() {
+        const swipeThreshold = 50;
+        if (touchEndX < touchStartX - swipeThreshold) {
+          // Swipe left, go next
+          goToSlide(currentSlide + 1);
+        } else if (touchEndX > touchStartX + swipeThreshold) {
+          // Swipe right, go previous
+          goToSlide(currentSlide - 1);
+        }
+      }
+    });
+  </script>
+</body>
+</html>
+      `;
+      
+      setHtmlContent(enhancedHtml);
       toast.success("Enhanced HTML generated successfully");
     } catch (error) {
-      console.error("Error generating enhanced HTML:", error);
-      toast.error("Failed to generate enhanced HTML. Please try again.");
+      handleError(error, ErrorType.API, "Failed to generate enhanced HTML");
       setHtmlContent(generateBasicHtmlContent());
     } finally {
       setIsGeneratingEnhanced(false);
