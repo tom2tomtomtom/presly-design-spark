@@ -617,12 +617,20 @@ const PresentationExport = ({ slides, cssTemplate }: PresentationExportProps) =>
         
         // Process each slide in the HTML
         htmlSlides.forEach((htmlSlide, index) => {
-          // Get slide content from HTML
-          const titleElement = htmlSlide.querySelector('.slide-title');
-          const contentElement = htmlSlide.querySelector('.slide-content');
+          // Get slide content from HTML with support for different class names
+          const titleElement = htmlSlide.querySelector('.slide-title') || 
+                              htmlSlide.querySelector('h1') || 
+                              htmlSlide.querySelector('h2');
+                              
+          const contentElement = htmlSlide.querySelector('.slide-content') || 
+                                htmlSlide.querySelector('.slide-inner') ||
+                                htmlSlide;
           
-          // Check for bullet lists
-          const bulletList = contentElement ? contentElement.querySelector('.slide-bullet-list') : null;
+          // Check for bullet lists with multiple possible class names
+          const bulletList = contentElement ? 
+            (contentElement.querySelector('.slide-bullet-list') || 
+             contentElement.querySelector('.slide-points') || 
+             contentElement.querySelector('ul')) : null;
           const bulletItems = bulletList ? bulletList.querySelectorAll('li') : [];
           
           const slideTitle = titleElement ? titleElement.textContent || `Slide ${index + 1}` : `Slide ${index + 1}`;
@@ -656,8 +664,11 @@ const PresentationExport = ({ slides, cssTemplate }: PresentationExportProps) =>
           
           // Get content from the HTML (this content element is already declared above)
           if (contentElement) {
-            // Check for bullet lists
-            const bulletList = contentElement.querySelector('.slide-bullet-list');
+            // Check for bullet lists with different possible class names
+            const bulletList = contentElement.querySelector('.slide-bullet-list') || 
+                               contentElement.querySelector('.slide-points') || 
+                               contentElement.querySelector('ul');
+                               
             if (bulletList) {
               const bullets = bulletList.querySelectorAll('li');
               console.log(`Adding ${bullets.length} HTML bullet points`);
@@ -673,6 +684,30 @@ const PresentationExport = ({ slides, cssTemplate }: PresentationExportProps) =>
               
               // Add bullet points one by one to ensure compatibility
               if (bulletPoints.length > 0) {
+                // Try to find bullet color in the CSS if possible
+                let bulletColor = '4a4a4a';
+                try {
+                  // Try to extract bullet color from ::before or direct styling
+                  const bulletStyleMatch = cssTemplate?.match(/\.slide-points\s+li:before.*?background-color:\s*([^;]*)|\.slide-bullet-list\s+li:before.*?background-color:\s*([^;]*)|ul\s+li:before.*?background-color:\s*([^;]*)/);
+                  if (bulletStyleMatch) {
+                    const colorValue = bulletStyleMatch[1] || bulletStyleMatch[2] || bulletStyleMatch[3];
+                    if (colorValue && colorValue.trim()) {
+                      // Convert if it's a variable
+                      if (colorValue.includes('var(--')) {
+                        const varName = colorValue.match(/var\(([^)]*)\)/)?.[1];
+                        if (varName) {
+                          const varValue = cssTemplate?.match(new RegExp(`${varName}:\\s*([^;]*)`))?.[1];
+                          if (varValue) bulletColor = varValue.trim().replace('#', '');
+                        }
+                      } else {
+                        bulletColor = colorValue.trim().replace('#', '');
+                      }
+                    }
+                  }
+                } catch (error) {
+                  console.log("Error extracting bullet color:", error);
+                }
+                
                 bulletPoints.forEach((bulletText, bulletIndex) => {
                   pptSlide.addText(bulletText, {
                     x: 0.5,
@@ -680,7 +715,7 @@ const PresentationExport = ({ slides, cssTemplate }: PresentationExportProps) =>
                     w: '90%',
                     bullet: true,
                     fontSize: 16,
-                    color: '4a4a4a'
+                    color: bulletColor
                   });
                 });
               }
@@ -688,48 +723,127 @@ const PresentationExport = ({ slides, cssTemplate }: PresentationExportProps) =>
               console.log("Adding HTML text content");
               
               // Get paragraphs or direct text content
-              const paragraphs = contentElement.querySelectorAll('p');
-              if (paragraphs.length > 0) {
-                const paragraphTexts = [];
-                paragraphs.forEach(paragraph => {
-                  const text = paragraph.textContent?.trim();
-                  if (text) {
-                    paragraphTexts.push(text);
-                  }
-                });
+              // Check for two-column layout first
+              const twoColumnLayout = contentElement.querySelector('.two-columns');
+              
+              if (twoColumnLayout) {
+                console.log("Found two-column layout");
                 
-                if (paragraphTexts.length > 0) {
-                  // If there's only one paragraph, add it as a string
-                  // Otherwise, add an array of paragraphs
-                  if (paragraphTexts.length === 1) {
-                    pptSlide.addText(paragraphTexts[0], {
-                      x: 0.5,
+                // For two column layout, handle each column separately
+                const columns = twoColumnLayout.querySelectorAll('.column');
+                if (columns.length >= 2) {
+                  // Left column
+                  const leftColumn = columns[0];
+                  const leftBullets = leftColumn.querySelector('ul, .slide-points, .slide-bullet-list');
+                  
+                  if (leftBullets) {
+                    // Process left column bullets
+                    const bullets = leftBullets.querySelectorAll('li');
+                    const bulletTexts = Array.from(bullets).map(bullet => bullet.textContent?.trim() || '');
+                    
+                    if (bulletTexts.length > 0) {
+                      bulletTexts.forEach((text, i) => {
+                        pptSlide.addText(text, {
+                          x: 0.5,
+                          y: 1.5 + (i * 0.4),
+                          w: '40%', // Narrower for column layout
+                          bullet: true,
+                          fontSize: 14,
+                          color: '4a4a4a'
+                        });
+                      });
+                    }
+                  } else {
+                    // Regular text in left column
+                    const leftText = leftColumn.textContent?.trim();
+                    if (leftText) {
+                      pptSlide.addText(leftText, {
+                        x: 0.5,
+                        y: 1.5,
+                        w: '40%',
+                        fontSize: 14,
+                        color: '4a4a4a'
+                      });
+                    }
+                  }
+                  
+                  // Right column - check for image first
+                  const rightColumn = columns[1];
+                  const image = rightColumn.querySelector('img');
+                  
+                  if (image && image.src) {
+                    console.log("Found image in right column");
+                    // Note: PowerPoint doesn't support adding remote images directly
+                    // We would need to download it first, which isn't feasible here
+                    // So we'll use a text placeholder
+                    
+                    pptSlide.addText("[Image would appear here]", {
+                      x: '55%',
                       y: 1.5,
-                      w: '90%',
-                      fontSize: 16,
-                      color: '4a4a4a'
+                      w: '40%',
+                      fontSize: 14,
+                      color: '9e9e9e',
+                      align: 'center'
                     });
                   } else {
-                    // Join paragraphs with newlines instead of using array
-                    pptSlide.addText(paragraphTexts.join('\n\n'), {
-                      x: 0.5,
-                      y: 1.5,
-                      w: '90%',
-                      fontSize: 16,
-                      color: '4a4a4a'
-                    });
+                    // Text in right column
+                    const rightText = rightColumn.textContent?.trim();
+                    if (rightText) {
+                      pptSlide.addText(rightText, {
+                        x: '55%',
+                        y: 1.5,
+                        w: '40%',
+                        fontSize: 14,
+                        color: '4a4a4a'
+                      });
+                    }
                   }
                 }
               } else {
-                const contentText = contentElement.textContent?.trim();
-                if (contentText) {
-                  pptSlide.addText(contentText, {
-                    x: 0.5,
-                    y: 1.5,
-                    w: '90%',
-                    fontSize: 16,
-                    color: '4a4a4a'
+                // Regular paragraph handling
+                const paragraphs = contentElement.querySelectorAll('p');
+                if (paragraphs.length > 0) {
+                  const paragraphTexts = [];
+                  paragraphs.forEach(paragraph => {
+                    const text = paragraph.textContent?.trim();
+                    if (text) {
+                      paragraphTexts.push(text);
+                    }
                   });
+                  
+                  if (paragraphTexts.length > 0) {
+                    // If there's only one paragraph, add it as a string
+                    // Otherwise, add an array of paragraphs
+                    if (paragraphTexts.length === 1) {
+                      pptSlide.addText(paragraphTexts[0], {
+                        x: 0.5,
+                        y: 1.5,
+                        w: '90%',
+                        fontSize: 16,
+                        color: '4a4a4a'
+                      });
+                    } else {
+                      // Join paragraphs with newlines instead of using array
+                      pptSlide.addText(paragraphTexts.join('\n\n'), {
+                        x: 0.5,
+                        y: 1.5,
+                        w: '90%',
+                        fontSize: 16,
+                        color: '4a4a4a'
+                      });
+                    }
+                  }
+                } else {
+                  const contentText = contentElement.textContent?.trim();
+                  if (contentText) {
+                    pptSlide.addText(contentText, {
+                      x: 0.5,
+                      y: 1.5,
+                      w: '90%',
+                      fontSize: 16,
+                      color: '4a4a4a'
+                    });
+                  }
                 }
               }
             }
