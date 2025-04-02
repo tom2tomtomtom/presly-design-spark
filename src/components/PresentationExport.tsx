@@ -1,10 +1,19 @@
+/**
+ * Main entry point for the Presentation Export functionality
+ * 
+ * @component PresentationExport
+ * @param {Object} props - Component props
+ * @param {Array<Slide>} props.slides - Array of slide objects to be exported
+ * @param {string|null} [props.cssTemplate] - Optional CSS template string to style the presentation
+ */
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Download, Copy, Wand, FileText } from "lucide-react";
+import { Download, Copy, Wand, FileText, FileType, FileImage } from "lucide-react";
 import * as pptxgen from "html-to-pptx";
+import { handleError, ErrorType } from "@/lib/error";
 
 interface PresentationExportProps {
   slides: any[];
@@ -249,32 +258,38 @@ Return ONLY the complete HTML code without any explanations or markdown. The HTM
       });
       
       // Generate the PPTX file
-      const pptxBuffer = await pptxgen.default(slidesData);
-      
-      // Convert buffer to Blob
-      const pptBlob = new Blob([pptxBuffer], { 
-        type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation' 
-      });
-      
-      const url = URL.createObjectURL(pptBlob);
-      
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "presentation.pptx";
-      document.body.appendChild(a);
-      a.click();
-      
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      
-      // Clean up
-      document.body.removeChild(tempDiv);
-      
-      setExportStatus("completed");
-      toast.success("PowerPoint presentation exported successfully");
+      try {
+        const pptxBuffer = await pptxgen.default(slidesData);
+        
+        // Convert buffer to Blob
+        const pptBlob = new Blob([pptxBuffer], { 
+          type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation' 
+        });
+        
+        const url = URL.createObjectURL(pptBlob);
+        
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "presentation.pptx";
+        document.body.appendChild(a);
+        a.click();
+        
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        // Clean up
+        document.body.removeChild(tempDiv);
+        
+        setExportStatus("completed");
+        toast.success("PowerPoint presentation exported successfully");
+      } catch (error) {
+        handleError(error, ErrorType.EXPORT, "Failed to generate PowerPoint", {
+          retry: () => handleExportPPT()
+        });
+        setExportStatus("idle");
+      }
     } catch (error) {
-      console.error("Error generating PowerPoint:", error);
-      toast.error("Failed to generate PowerPoint. Please try again.");
+      handleError(error, ErrorType.EXPORT, "Error preparing slides for export");
       setExportStatus("idle");
     }
   };
@@ -282,6 +297,95 @@ Return ONLY the complete HTML code without any explanations or markdown. The HTM
   const handleCopyHTML = () => {
     navigator.clipboard.writeText(htmlContent);
     toast.success("HTML copied to clipboard");
+  };
+  
+  /**
+   * Exports the presentation as a PDF file
+   * This uses the native browser print functionality with PDF export
+   */
+  const handleExportPDF = () => {
+    setExportStatus("processing");
+    
+    try {
+      // Create a temporary iframe to render the HTML content for printing
+      const iframe = document.createElement('iframe');
+      iframe.style.position = 'fixed';
+      iframe.style.top = '-9999px';
+      iframe.style.left = '-9999px';
+      iframe.style.width = '1024px';  // Standard presentation width
+      iframe.style.height = '768px';  // Standard presentation height
+      iframe.style.border = 'none';
+      document.body.appendChild(iframe);
+      
+      // Add content to the iframe
+      iframe.contentWindow?.document.open();
+      iframe.contentWindow?.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Presentation Export</title>
+          <style>
+            @page {
+              size: landscape;
+              margin: 0;
+            }
+            body {
+              margin: 0;
+            }
+            .slide-page {
+              page-break-after: always;
+              height: 100vh;
+              width: 100vw;
+              display: flex;
+              flex-direction: column;
+              padding: 0;
+              margin: 0;
+              overflow: hidden;
+            }
+            ${cssTemplate || ''}
+          </style>
+        </head>
+        <body>
+          ${slides.map((slide, index) => `
+            <div class="slide-page">
+              <div class="slide" style="height: 100%; width: 100%; margin: 0; box-shadow: none; border-radius: 0;">
+                <h2 class="slide-title">${slide.title}</h2>
+                <div class="slide-content">
+                  ${slide.type === "bullets" 
+                    ? `<ul class="slide-bullet-list">${Array.isArray(slide.content) ? slide.content.map(item => `<li>${item}</li>`).join('') : ''}</ul>` 
+                    : slide.type === "title"
+                      ? `<p style="text-align: center; font-size: 24px; margin-top: 80px;">${slide.content}</p>`
+                      : `<p>${slide.content}</p>`
+                  }
+                </div>
+                <div class="slide-footer">
+                  Slide ${index+1}/${slides.length}
+                </div>
+              </div>
+            </div>
+          `).join('')}
+        </body>
+        </html>
+      `);
+      iframe.contentWindow?.document.close();
+      
+      // Wait a moment for rendering and then print
+      setTimeout(() => {
+        iframe.contentWindow?.print();
+        
+        // Remove the iframe after printing
+        setTimeout(() => {
+          document.body.removeChild(iframe);
+          setExportStatus("completed");
+          toast.success("PDF export prepared. Use your browser's save as PDF option in the print dialog.");
+        }, 1000);
+      }, 500);
+    } catch (error) {
+      handleError(error, ErrorType.EXPORT, "Failed to generate PDF", {
+        retry: () => handleExportPDF()
+      });
+      setExportStatus("idle");
+    }
   };
   
   return (
@@ -346,47 +450,69 @@ Return ONLY the complete HTML code without any explanations or markdown. The HTM
           </CardContent>
         </Card>
         
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center mb-4">
-              <FileText className="h-6 w-6 mr-2 text-primary" />
-              <h3 className="text-lg font-medium">PowerPoint Export</h3>
-            </div>
-            
-            <p className="text-sm text-muted-foreground mb-4">
-              Convert your HTML presentation to a PowerPoint (PPTX) file directly in your browser.
-            </p>
-            
-            <div className="mt-6">
-              {exportStatus === "idle" && (
-                <Button onClick={handleExportPPT}>
-                  <Download className="mr-2 h-4 w-4" />
-                  Generate PowerPoint
-                </Button>
-              )}
+        <div className="grid md:grid-cols-2 gap-4">
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center mb-4">
+                <FileType className="h-6 w-6 mr-2 text-primary" />
+                <h3 className="text-lg font-medium">PowerPoint Export</h3>
+              </div>
               
-              {exportStatus === "processing" && (
-                <Button disabled>
-                  <div className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-current border-t-transparent"></div>
-                  Processing...
-                </Button>
-              )}
+              <p className="text-sm text-muted-foreground mb-4">
+                Convert your HTML presentation to a PowerPoint (PPTX) file directly in your browser.
+              </p>
               
-              {exportStatus === "completed" && (
-                <div className="space-y-4">
-                  <p className="text-sm text-green-600">
-                    PowerPoint file generated successfully!
-                  </p>
-                  
-                  <Button onClick={handleExportPPT}>
+              <div className="mt-6">
+                {exportStatus === "idle" && (
+                  <Button onClick={handleExportPPT} className="w-full">
                     <Download className="mr-2 h-4 w-4" />
-                    Download PowerPoint
+                    Generate PowerPoint
                   </Button>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+                )}
+                
+                {exportStatus === "processing" && (
+                  <Button disabled className="w-full">
+                    <div className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-current border-t-transparent"></div>
+                    Processing...
+                  </Button>
+                )}
+                
+                {exportStatus === "completed" && (
+                  <div className="space-y-4">
+                    <p className="text-sm text-green-600">
+                      PowerPoint file generated successfully!
+                    </p>
+                    
+                    <Button onClick={handleExportPPT} className="w-full">
+                      <Download className="mr-2 h-4 w-4" />
+                      Download PowerPoint
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center mb-4">
+                <FileImage className="h-6 w-6 mr-2 text-primary" />
+                <h3 className="text-lg font-medium">PDF Export</h3>
+              </div>
+              
+              <p className="text-sm text-muted-foreground mb-4">
+                Export your presentation as a print-ready PDF document with proper page breaks.
+              </p>
+              
+              <div className="mt-6">
+                <Button onClick={handleExportPDF} className="w-full">
+                  <Download className="mr-2 h-4 w-4" />
+                  Export as PDF
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
       
       <div className="mt-8">

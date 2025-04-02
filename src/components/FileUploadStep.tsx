@@ -4,7 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { FileText, Image, Upload } from "lucide-react";
+import { FileText, Image, Upload, ArrowRight } from "lucide-react";
+import TemplateGallery from "./TemplateGallery";
+import { useStyle } from "@/lib/StyleContext";
+import { toast } from "sonner";
 
 interface FileUploadStepProps {
   docFile: File | null;
@@ -86,17 +89,21 @@ const FileUploadStep = ({
     }
   };
   
-  const predefinedTemplates = [
-    { id: 1, name: "Corporate Blue", color: "bg-blue-500" },
-    { id: 2, name: "Elegant Black", color: "bg-gray-900" },
-    { id: 3, name: "Vibrant Green", color: "bg-green-500" },
-  ];
+  const { setCssTemplate } = useStyle();
   
-  const selectPredefinedTemplate = (id: number) => {
-    setSelectedTemplate(id);
+  const handleTemplateSelection = (id: string, css: string) => {
+    // Reset other template selections
+    setSelectedTemplate(null);
     setTemplatePreview(null);
-    setCssContent(null);
+    setCssContent(css);
     setTemplateFile(null);
+    
+    // Create a CSS file object from the template
+    const cssBlob = new Blob([css], { type: 'text/css' });
+    const file = new File([cssBlob], `${id}-template.css`, { type: 'text/css' });
+    setTemplateFile(file);
+    
+    toast.success(`Template "${id}" selected`);
   };
 
   return (
@@ -231,30 +238,20 @@ const FileUploadStep = ({
         </Card>
       </div>
 
-      <div>
-        <h3 className="text-lg font-medium mb-4">Or select a predefined template:</h3>
-        <div className="grid grid-cols-3 gap-4">
-          {predefinedTemplates.map((template) => (
-            <div 
-              key={template.id}
-              className={`template-preview ${selectedTemplate === template.id ? 'selected' : ''}`}
-              onClick={() => selectPredefinedTemplate(template.id)}
-            >
-              <div className={`h-32 ${template.color} rounded-md mb-2`}></div>
-              <p className="text-center text-sm font-medium">{template.name}</p>
-            </div>
-          ))}
-        </div>
-      </div>
+      <Card>
+        <CardContent className="pt-6">
+          <TemplateGallery onSelectTemplate={handleTemplateSelection} />
+        </CardContent>
+      </Card>
       
       <div className="mt-8 flex justify-end">
         <Button 
           onClick={onProcess}
-          disabled={!docFile && !selectedTemplate}
+          disabled={!docFile}
           className="px-6"
         >
-          <Upload className="mr-2 h-4 w-4" />
-          Generate Presentation
+          <ArrowRight className="mr-2 h-4 w-4" />
+          Continue to Editing
         </Button>
       </div>
     </div>
