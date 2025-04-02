@@ -12,7 +12,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Download, Copy, Wand, FileText, FileType, FileImage } from "lucide-react";
-import * as pptxgen from "html-to-pptx";
+// Import JSZip and PptxGenJS directly instead of using html-to-pptx
+import pptxgen from 'pptxgenjs';
 import { handleError, ErrorType } from "@/lib/error";
 
 interface PresentationExportProps {
@@ -239,57 +240,111 @@ Return ONLY the complete HTML code without any explanations or markdown. The HTM
     setExportStatus("processing");
     
     try {
-      // Create a temporary div to render the HTML content
-      const tempDiv = document.createElement('div');
-      tempDiv.innerHTML = htmlContent;
-      document.body.appendChild(tempDiv);
+      // Create a new instance of PptxGenJS
+      const pres = new pptxgen();
       
-      // Get all slide elements
-      const slideElements = tempDiv.querySelectorAll('.slide');
-      
-      // Create slides array for the PPTX generation
-      const slidesData = Array.from(slideElements).map((slide, index) => {
-        return {
-          html: slide.outerHTML,
-          filename: `slide-${index + 1}`,
-          width: 10,
-          height: 5.625 // 16:9 aspect ratio
-        };
-      });
-      
-      // Generate the PPTX file
-      try {
-        const pptxBuffer = await pptxgen.default(slidesData);
+      // Process slides
+      for (const slide of slides) {
+        // Add a new slide
+        const pptSlide = pres.addSlide();
         
-        // Convert buffer to Blob
-        const pptBlob = new Blob([pptxBuffer], { 
-          type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation' 
+        // Set slide title
+        pptSlide.addText(slide.title, { 
+          x: 0.5, 
+          y: 0.5, 
+          w: '90%', 
+          fontSize: 24,
+          bold: true,
+          color: '363636'
         });
         
-        const url = URL.createObjectURL(pptBlob);
+        // Add content based on slide type
+        if (slide.type === 'bullets' && Array.isArray(slide.content)) {
+          // For bullet points
+          slide.content.forEach((item, index) => {
+            pptSlide.addText(item, {
+              x: 0.5,
+              y: 1.5 + (index * 0.5),
+              w: '90%',
+              bullet: true,
+              fontSize: 16,
+              color: '4a4a4a'
+            });
+          });
+        } else if (slide.type === 'title') {
+          // For title slides
+          pptSlide.addText(typeof slide.content === 'string' ? slide.content : '', {
+            x: 0.5,
+            y: 3,
+            w: '90%',
+            h: 1,
+            align: 'center',
+            fontSize: 20,
+            color: '4a4a4a'
+          });
+        } else {
+          // For text slides
+          pptSlide.addText(typeof slide.content === 'string' ? slide.content : '', {
+            x: 0.5,
+            y: 1.5,
+            w: '90%',
+            fontSize: 16,
+            color: '4a4a4a'
+          });
+        }
         
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = "presentation.pptx";
-        document.body.appendChild(a);
-        a.click();
-        
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        
-        // Clean up
-        document.body.removeChild(tempDiv);
-        
-        setExportStatus("completed");
-        toast.success("PowerPoint presentation exported successfully");
-      } catch (error) {
-        handleError(error, ErrorType.EXPORT, "Failed to generate PowerPoint", {
-          retry: () => handleExportPPT()
+        // Add slide number
+        pptSlide.addText(`Slide ${slide.id}`, {
+          x: 0.5,
+          y: 6.5,
+          w: 2,
+          fontSize: 10,
+          color: '9e9e9e'
         });
-        setExportStatus("idle");
       }
+      
+      // Apply a theme if available
+      if (cssTemplate) {
+        try {
+          // Extract colors from CSS if possible
+          const accentColorMatch = cssTemplate.match(/--accent-color:\s*([^;]*)/);
+          if (accentColorMatch && accentColorMatch[1]) {
+            const accentColor = accentColorMatch[1].trim();
+            
+            // Apply as theme colors if it's a hex color
+            if (accentColor.startsWith('#')) {
+              pres.defineTheme({
+                name: 'customTheme',
+                headFontFace: 'Arial',
+                bodyFontFace: 'Arial',
+                colorScheme: 'custom',
+                title: { color: accentColor },
+                background: { color: '#FFFFFF' }
+              });
+              pres.applyTheme('customTheme');
+            }
+          }
+        } catch (error) {
+          console.warn('Could not apply CSS theme to PowerPoint', error);
+        }
+      }
+      
+      // Save the presentation
+      pres.writeFile({ fileName: 'presentation.pptx' })
+        .then(() => {
+          setExportStatus("completed");
+          toast.success("PowerPoint presentation exported successfully");
+        })
+        .catch((error) => {
+          handleError(error, ErrorType.EXPORT, "Failed to save PowerPoint file", {
+            retry: () => handleExportPPT()
+          });
+          setExportStatus("idle");
+        });
     } catch (error) {
-      handleError(error, ErrorType.EXPORT, "Error preparing slides for export");
+      handleError(error, ErrorType.EXPORT, "Error generating PowerPoint", {
+        retry: () => handleExportPPT()
+      });
       setExportStatus("idle");
     }
   };
