@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Download, Copy, ExternalLink, FileText } from "lucide-react";
+import { Download, Copy, ExternalLink, FileText, Wand } from "lucide-react";
 
 interface PresentationExportProps {
   slides: any[];
@@ -13,9 +13,11 @@ interface PresentationExportProps {
 const PresentationExport = ({ slides }: PresentationExportProps) => {
   const [exportStatus, setExportStatus] = useState<"idle" | "processing" | "completed">("idle");
   const [exportLink, setExportLink] = useState<string | null>(null);
+  const [htmlContent, setHtmlContent] = useState<string>("");
+  const [isGeneratingEnhanced, setIsGeneratingEnhanced] = useState(false);
   
-  const generateHtmlContent = () => {
-    // In a real app, this would generate proper HTML for the presentation
+  const generateBasicHtmlContent = () => {
+    // Basic HTML generation (same as before)
     return `
 <!DOCTYPE html>
 <html>
@@ -42,10 +44,82 @@ const PresentationExport = ({ slides }: PresentationExportProps) => {
 </html>
     `;
   };
+
+  const generateEnhancedHtml = async () => {
+    const apiKey = localStorage.getItem("anthropicApiKey");
+    
+    if (!apiKey) {
+      toast.error("API key not found. Please enter your Anthropic API key in the settings.");
+      return;
+    }
+    
+    setIsGeneratingEnhanced(true);
+    
+    try {
+      const slidesData = slides.map(slide => ({
+        title: slide.title,
+        content: slide.content,
+        type: slide.type
+      }));
+      
+      const response = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": apiKey,
+          "anthropic-version": "2023-06-01"
+        },
+        body: JSON.stringify({
+          model: "claude-3-sonnet-20240229",
+          max_tokens: 4000,
+          messages: [
+            {
+              role: "user",
+              content: `Generate an enhanced HTML presentation from the following slides data:
+${JSON.stringify(slidesData, null, 2)}
+
+Please create a visually appealing HTML presentation with:
+1. Modern responsive design
+2. Nice transitions between slides
+3. Proper styling for each slide type
+4. A navigation system
+5. Clean typography
+
+Return ONLY the complete HTML code without any explanations or markdown. The HTML should be ready to save as a standalone file.`
+            }
+          ]
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error("Failed to generate enhanced HTML");
+      }
+      
+      const data = await response.json();
+      const enhancedHtml = data.content[0].text;
+      
+      // Extract just the HTML if it's wrapped in code blocks
+      const htmlMatch = enhancedHtml.match(/```html\s*([\s\S]*?)\s*```/) || 
+                         enhancedHtml.match(/```\s*([\s\S]*?)\s*```/) ||
+                         [null, enhancedHtml];
+      
+      setHtmlContent(htmlMatch[1] || enhancedHtml);
+      toast.success("Enhanced HTML generated successfully");
+    } catch (error) {
+      console.error("Error generating enhanced HTML:", error);
+      toast.error("Failed to generate enhanced HTML. Please try again.");
+      setHtmlContent(generateBasicHtmlContent());
+    } finally {
+      setIsGeneratingEnhanced(false);
+    }
+  };
+  
+  // Initialize HTML content on component mount
+  useState(() => {
+    setHtmlContent(generateBasicHtmlContent());
+  });
   
   const handleExportHTML = () => {
-    const htmlContent = generateHtmlContent();
-    
     // Create a Blob from the HTML content
     const blob = new Blob([htmlContent], { type: "text/html" });
     const url = URL.createObjectURL(blob);
@@ -77,7 +151,6 @@ const PresentationExport = ({ slides }: PresentationExportProps) => {
   };
   
   const handleCopyHTML = () => {
-    const htmlContent = generateHtmlContent();
     navigator.clipboard.writeText(htmlContent);
     toast.success("HTML copied to clipboard");
   };
@@ -103,7 +176,34 @@ const PresentationExport = ({ slides }: PresentationExportProps) => {
               Export your presentation as an HTML file that can be viewed in any browser. This format preserves all formatting and styling.
             </p>
             
-            <div className="mt-6 flex space-x-2">
+            <div className="mt-6 flex flex-wrap gap-2">
+              <Button variant="secondary" onClick={() => {
+                setHtmlContent(generateBasicHtmlContent());
+                toast.success("Basic HTML template loaded");
+              }}>
+                Basic Template
+              </Button>
+              
+              <Button 
+                variant="default" 
+                onClick={generateEnhancedHtml}
+                disabled={isGeneratingEnhanced}
+              >
+                {isGeneratingEnhanced ? (
+                  <>
+                    <div className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-current border-t-transparent"></div>
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <Wand className="mr-2 h-4 w-4" />
+                    Generate Enhanced HTML
+                  </>
+                )}
+              </Button>
+            </div>
+            
+            <div className="mt-4 flex space-x-2">
               <Button onClick={handleExportHTML}>
                 <Download className="mr-2 h-4 w-4" />
                 Download HTML
@@ -138,7 +238,7 @@ const PresentationExport = ({ slides }: PresentationExportProps) => {
               
               {exportStatus === "processing" && (
                 <Button disabled>
-                  <div className="spinner mr-2"></div>
+                  <div className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-current border-t-transparent"></div>
                   Processing...
                 </Button>
               )}
@@ -170,7 +270,7 @@ const PresentationExport = ({ slides }: PresentationExportProps) => {
               readOnly
               className="font-mono text-sm"
               rows={10}
-              value={generateHtmlContent()}
+              value={htmlContent}
             />
           </CardContent>
         </Card>
