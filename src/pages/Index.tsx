@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
@@ -7,6 +6,10 @@ import PresentationEditor from "@/components/PresentationEditor";
 import PresentationExport from "@/components/PresentationExport";
 import StepIndicator from "@/components/StepIndicator";
 import SettingsModal from "@/components/SettingsModal";
+import HTMLGenerator from "@/components/HTMLGenerator";
+import HTMLPreview from "@/components/HTMLPreview";
+import { useStyle } from "@/lib/StyleContext";
+import { Button } from "@/components/ui/button";
 
 const Index = () => {
   const [currentStep, setCurrentStep] = useState(1);
@@ -15,7 +18,9 @@ const Index = () => {
   const [slides, setSlides] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState("upload");
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
-  const [cssTemplate, setCssTemplate] = useState<string | null>(null);
+  const { cssTemplate, setCssTemplate } = useStyle();
+  const [generatedHTML, setGeneratedHTML] = useState<string>("");
+  const [htmlGenerated, setHtmlGenerated] = useState(false);
   
   useEffect(() => {
     const apiKey = localStorage.getItem("anthropicApiKey");
@@ -31,7 +36,6 @@ const Index = () => {
       reader.onload = (e) => {
         if (e.target && typeof e.target.result === 'string') {
           console.log("CSS template loaded, length:", e.target.result.length);
-          console.log("CSS sample:", e.target.result.substring(0, 200)); // Log a sample of the CSS for debugging
           
           // Validate the CSS by attempting to create a style element
           try {
@@ -51,7 +55,7 @@ const Index = () => {
       toast.error("Unsupported template file. Please upload a CSS file.");
       setCssTemplate(null);
     }
-  }, [templateFile]);
+  }, [templateFile, setCssTemplate]);
   
   const processFiles = async () => {
     if (!docFile) {
@@ -63,7 +67,7 @@ const Index = () => {
     
     try {
       // In a real implementation, we would parse the document here
-      // For now, let's generate more sample slides
+      // For now, let's generate sample slides
       const sampleSlides = [
         {
           id: 1,
@@ -138,18 +142,36 @@ const Index = () => {
       
       setSlides(sampleSlides);
       setCurrentStep(2);
-      setActiveTab("edit");
-      toast.success("Presentation generated successfully!");
+      setActiveTab("preview");
+      setHtmlGenerated(false);
+      toast.success("Presentation content extracted successfully!");
     } catch (error) {
       console.error("Error processing files:", error);
       toast.error("Failed to process files. Please try again.");
     }
   };
   
+  const handleHTMLGenerated = (html: string) => {
+    setGeneratedHTML(html);
+    setHtmlGenerated(true);
+  };
+  
+  const handleEditContent = () => {
+    setActiveTab("edit");
+  };
+  
   const handleExport = () => {
     setCurrentStep(3);
     setActiveTab("export");
     toast.success("Preparing your presentation for export");
+  };
+  
+  // Function to handle HTML regeneration after editing
+  const handleUpdateHTML = () => {
+    setActiveTab("preview");
+    setHtmlGenerated(false);
+    toast.info("Regenerating HTML with your changes...");
+    // The HTMLGenerator component will automatically regenerate
   };
   
   const renderTabContent = () => {
@@ -164,14 +186,60 @@ const Index = () => {
             onProcess={processFiles} 
           />
         );
+      case "preview":
+        return (
+          <div className="space-y-6">
+            <HTMLGenerator 
+              slides={slides} 
+              cssTemplate={cssTemplate}
+              onHTMLGenerated={handleHTMLGenerated}
+            />
+            
+            {htmlGenerated && (
+              <>
+                <HTMLPreview html={generatedHTML} />
+                
+                <div className="flex justify-end space-x-3 mt-6">
+                  <Button 
+                    variant="outline"
+                    onClick={handleEditContent}
+                  >
+                    Edit Content
+                  </Button>
+                  <Button 
+                    onClick={handleExport}
+                  >
+                    Proceed to Export
+                  </Button>
+                </div>
+              </>
+            )}
+          </div>
+        );
       case "edit":
         return (
-          <PresentationEditor 
-            slides={slides} 
-            setSlides={setSlides} 
-            onExport={handleExport}
-            cssTemplate={cssTemplate}
-          />
+          <div className="space-y-6">
+            <PresentationEditor 
+              slides={slides} 
+              setSlides={setSlides} 
+              onExport={handleUpdateHTML}
+              cssTemplate={cssTemplate}
+            />
+            
+            <div className="flex justify-end space-x-3 mt-6">
+              <Button 
+                variant="secondary"
+                onClick={handleUpdateHTML}
+              >
+                Preview Changes
+              </Button>
+              <Button 
+                onClick={handleExport}
+              >
+                Proceed to Export
+              </Button>
+            </div>
+          </div>
         );
       case "export":
         return (
@@ -197,15 +265,18 @@ const Index = () => {
       <StepIndicator currentStep={currentStep} />
       
       <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-8">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="upload" disabled={currentStep < 1}>
             1. Upload Files
           </TabsTrigger>
+          <TabsTrigger value="preview" disabled={currentStep < 2}>
+            2. Preview
+          </TabsTrigger>
           <TabsTrigger value="edit" disabled={currentStep < 2}>
-            2. Edit Presentation
+            3. Edit Content
           </TabsTrigger>
           <TabsTrigger value="export" disabled={currentStep < 3}>
-            3. Export
+            4. Export
           </TabsTrigger>
         </TabsList>
         

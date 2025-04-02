@@ -180,7 +180,7 @@ const PresentationEditor = ({
         <div>
           <h2 className="text-2xl font-bold">Edit Presentation</h2>
           <p className="text-muted-foreground">
-            Customize your slides or get AI assistance
+            Customize your slides or get AI assistance. After editing, view your changes in the HTML preview.
           </p>
         </div>
         
@@ -198,14 +198,15 @@ const PresentationEditor = ({
             onClick={togglePresentationMode}
           >
             <Play className="mr-2 h-4 w-4" />
-            Preview
+            Quick Preview
           </Button>
           
           <Button 
             onClick={onExport}
+            variant="default"
           >
             <Download className="mr-2 h-4 w-4" />
-            Export to PPT
+            Generate HTML
           </Button>
         </div>
       </div>
